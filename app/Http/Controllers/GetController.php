@@ -281,21 +281,28 @@ class GetController extends Controller
     }
 
     public function getLedgers(Request $request){
-        $from = $request->from;
-        $to = $request->to;
+        try{
+            $ledger = $this->prepareLedgers($request->from, $request->to, $request->id);
+            return response($ledger,201);
+        }catch (Exception $e){
+            return response('error',500);
+        }
+    }
+
+    public function prepareLedgers($from,$to,$id){
         $targeted_day = date('Y-m-d H:i:s', strtotime(' -1 day',strtotime($to)));
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
             $from = date('Y-m-d H:i:s', strtotime($from));
             $to = date('Y-m-d H:i:s', strtotime($to));
             $query->whereBetween('created_at',[$from,$to]);
-        }])->where('id',$request->id)->get();
-        $list = [];
+        }])->where('id',$id)->get();
         $beginning = date('Y-m-d H:i:s',strtotime('2018-1-1'));
         $opening_balance_ledger = Ledgers::with(['journal' => function($query) use($beginning,$targeted_day){
             $from = date('Y-m-d H:i:s', strtotime($beginning));
             $to = date('Y-m-d H:i:s', strtotime($targeted_day));
             $query->whereBetween('created_at',[$from,$to]);
-        }])->where('id',$request->id)->get();
+        }])->where('id',$id)->get();
+
         $opening_balance = new \stdClass();
 
         foreach ($opening_balance_ledger as $item){
@@ -304,6 +311,8 @@ class GetController extends Controller
                 $debitors = $this->findAccountForLedger($item->journal,$item,'Dr');
                 $dr_balance = $this->calculateLedgerBalance($creditors);
                 $cr_balance = $this->calculateLedgerBalance($debitors);
+                $balance = 0;
+                $type = 'N/A';
 
                 if($dr_balance>$cr_balance){
                     $balance = $dr_balance-$cr_balance;
@@ -315,6 +324,10 @@ class GetController extends Controller
                 }
                 $opening_balance->balance = $balance;
                 $opening_balance->balance_type = $type;
+            }
+            else{
+                    $opening_balance->balance = 0;
+                    $opening_balance->balance_type = 'N/A';
             }
 
         }
@@ -350,10 +363,44 @@ class GetController extends Controller
                 $object->balance_type = $type;
                 $object->opening_balance = $opening_balance->balance;
                 $object->opening_balance_type = $opening_balance->balance_type;
-                $list[] = $object;
+            }
+            else{
+                $creditors = [];
+                $debitors = [];
+                $object = new \stdClass();
+                $object->id = $item->id;
+                $object->name = $item->name;
+                $object->cr = (object)$creditors;
+                $object->dr = (object)$debitors;
+                $dr_balance = 0;
+                $cr_balance = 0;
+                if($opening_balance->balance_type == 'Dr'){
+                    $dr_balance = $dr_balance+floatval($opening_balance->balance);
+                }else{
+                    $cr_balance = $cr_balance+floatval($opening_balance->balance);
+                }
+                $object->dr_balance = $dr_balance;
+                $object->cr_balance = $cr_balance;
+
+                if($dr_balance>$cr_balance){
+                    $balance = $dr_balance-$cr_balance;
+                    $type = "Dr";
+                }
+                elseif($dr_balance < $cr_balance){
+                    $balance = $cr_balance-$dr_balance;
+                    $type = "Cr";
+                }
+                else{
+                    $balance = $cr_balance-$dr_balance;
+                    $type = "N/A";
+                }
+                $object->balance = $balance;
+                $object->balance_type = $type;
+                $object->opening_balance = $opening_balance->balance;
+                $object->opening_balance_type = $opening_balance->balance_type;
             }
         }
-        return $list;
+        return json_encode($object);
     }
 
     public function getTimeWisePurchase(Request $request){
@@ -733,8 +780,141 @@ class GetController extends Controller
         }
     }
 
-    public function getProfitAndLossAccount(Request $request){
+    public function prepareBalanceSheet($from,$to){
+        $ledgers = Ledgers::with(['ledger_categorie' => function($query){
+            return $query->where('name', '!=', 'Particular');
+        }])->get();
+        $balance_sheet = [];
+        foreach ($ledgers as $item){
+            if(sizeof($item->ledger_categorie)>0){
+                $data = json_decode($this->prepareLedgers($from,$to,$item->id));
+                $obj = new \stdClass();
+                $obj->id = $data->id;
+                $obj->name = $data->name;
+                $obj->balance = $data->balance;
+                $obj->type = $data->balance_type;
+                $balance_sheet[] = $obj;
+            }
+        }
+        return $balance_sheet;
+    }
 
+
+    public function getProfitAndLossAccount(Request $request){
+        $balance_sheet = $this->prepareBalanceSheet($request->from, $request->to);
+        $profit_loss = new \stdClass();
+        $expense = new \stdClass();
+        $revenue = new \stdClass();
+
+        $total_direct_expense = 0;
+        $direct_expenses_accounts = [];
+        $direct_revenues_accounts = [];
+        $total_direct_revenue = 0;
+        foreach ($balance_sheet as $item){
+            if($item->name == 'Purchase' || $item->name == 'Transport' || $item->name == 'Other' || $item->name == 'Labour'){
+                $obj = new \stdClass();
+                $obj->name = $item->name;
+                $obj->balance = $item->balance;
+                $total_direct_expense = $total_direct_expense+$item->balance;
+                $direct_expenses_accounts [] = $obj;
+            }
+        }
+        foreach ($balance_sheet as $item){
+            if($item->name == 'Sale'){
+                $obj = new \stdClass();
+                $obj->name = $item->name;
+                $obj->balance = $item->balance;
+                $total_direct_revenue = $total_direct_revenue+$item->balance;
+                $direct_revenues_accounts[] = $obj;
+            }
+        }
+        $from = date('Y-m-d H:i:s', strtotime($request->from));
+        $to = date('Y-m-d H:i:s', strtotime($request->to));
+
+        $purchase = Purchases::with('product')->whereBetween('created_at',[$from,$to])->get();
+        $closing_stock = 0;
+        foreach ($purchase as $item){
+            foreach ($item->product as $product){
+                $price = $product->stock * $product->purchase_unit_price;
+                $closing_stock = $closing_stock+$price;
+            }
+        }
+        $closing_obj = new \stdClass();
+        $closing_obj->name = 'Closing Stock';
+        $closing_obj->balance = $closing_stock;
+        $total_direct_revenue = $total_direct_revenue+$closing_stock;
+        $direct_revenues_accounts[] = $closing_obj;
+
+        if($total_direct_revenue> $total_direct_expense){
+            $gross_value = $total_direct_revenue-$total_direct_expense;
+            $gross_type = 'profit';
+        }
+        elseif($total_direct_revenue< $total_direct_expense){
+            $gross_value = $total_direct_expense - $total_direct_revenue;
+            $gross_type = 'loss';
+        }
+        else{
+            $gross_value = 0;
+            $gross_type = 'same';
+        }
+
+        $indirect_expenses_accounts = [];
+        $total_indirect_expense = 0;
+
+        $total_indirect_revenue = 0;
+        $indirect_revenues_accounts = 0;
+
+        $d_ex = new \stdClass();
+        $d_ex->accounts = $direct_expenses_accounts;
+        $d_ex->total = $total_direct_expense;
+
+        $ind_ex = new \stdClass();
+        $ind_ex->accounts = $indirect_expenses_accounts;
+        $ind_ex->total = $total_indirect_expense;
+
+        $d_rev = new \stdClass();
+        $d_rev->accounts = $direct_revenues_accounts;
+        $d_rev->total = $total_direct_revenue;
+
+        $ind_rev = new \stdClass();
+        $ind_rev->accounts = $indirect_revenues_accounts;
+        $ind_rev->total = $total_indirect_revenue;
+
+
+        if($gross_type == 'profit'){
+            $total_indirect_revenue = $total_indirect_revenue+$gross_value;
+        }
+        else{
+            $total_indirect_expense = $total_indirect_expense+$gross_value;
+        }
+
+        if($total_indirect_expense>$total_indirect_revenue){
+            $net_type = 'loss';
+            $net_value = $total_indirect_revenue+$gross_value;
+        }
+        elseif($total_indirect_expense<$total_indirect_revenue){
+            $net_type = 'profit';
+            $net_value = $total_indirect_expense+$gross_value;
+        }else{
+            $net_type = 'same';
+            $net_value = 0;
+        }
+
+        $expense->direct = $d_ex;
+        $expense->indirect = $ind_ex;
+        $revenue->direct = $d_rev;
+        $revenue->indirect = $ind_rev;
+
+
+        $profit_loss->expense = $expense;
+        $profit_loss->revenue = $revenue;
+        $profit_loss->gross_value = $gross_value;
+        $profit_loss->gross_type = $gross_type;
+        $profit_loss->net_value = $net_value;
+        $profit_loss->net_type = $net_type;
+
+
+        return json_encode($profit_loss);
     }
     public function getPurchaseHistoryAccounts(Request $request){
         try{

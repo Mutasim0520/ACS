@@ -117,6 +117,7 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->get('/api/sale/history/accounts',['uses' =>'GetController@getSaleHistoryAccounts']);
    $router->post('/api/update/sale',['uses' => 'UpdateController@updateSale']);
    $router->get('/api/filter/stock',['uses' => 'GetController@filterStock']);
+   $router->get('/api/profit-loss',['uses' => 'GetController@getProfitAndLossAccount']);
 
 });
 
