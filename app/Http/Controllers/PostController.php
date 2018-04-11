@@ -838,6 +838,4 @@ class PostController extends Controller
             return response('error',500);
         }
     }
-
-
 }

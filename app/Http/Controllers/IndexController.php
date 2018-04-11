@@ -86,7 +86,7 @@ class IndexController extends Controller
             $user->name = $request->name;
             $user->email = $request->email;
             $user->password = $request->password;
-            $user->role = 'super';
+            $user->role = $request->role;
             $user->save();
             foreach ($request->roles as $item){
 

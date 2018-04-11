@@ -799,7 +799,6 @@ class GetController extends Controller
         return $balance_sheet;
     }
 
-
     public function getProfitAndLossAccount(Request $request){
         $balance_sheet = $this->prepareBalanceSheet($request->from, $request->to);
         $profit_loss = new \stdClass();
@@ -916,6 +915,7 @@ class GetController extends Controller
 
         return json_encode($profit_loss);
     }
+
     public function getPurchaseHistoryAccounts(Request $request){
         try{
             $history = Purchases::with(['accounts_purchase_historie' => function($query){
