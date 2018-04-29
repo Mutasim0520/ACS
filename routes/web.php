@@ -30,24 +30,6 @@ $router->get('/test',[
 ]);
 
 
-$router->group(['middleware' => 'warehouse'], function () use ($router){
-    $router->post('/api/{role}/supplier/store',['uses' => 'PostController@storeSuppliers']);
-    $router->post('/api/{role}/category/store',['uses' => 'PostController@storeCategories']);
-    $router->post('/api/{role}/color/store',['uses' => 'PostController@storeColors']);
-    $router->post('/api/{role}/size/store',['uses' => 'PostController@storeSizes']);
-    $router->post('/api/{role}/buyer/store',['uses' => 'PostController@storeBuyers']);
-    $router->post('/api/{role}/subcategory/store',['uses' => 'PostController@storeSubCategories']);
-    $router->post('/api/{role}/purchase/product/store',['uses' => 'PostController@storePurchasedProduct']);
-    $router->post('/api/{role}/sales/product/store',['uses' => 'PostController@storeSoldProduct']);
-
-    ////Updates Routes
-
-    $router->post('/api/{role}/purchase/product/update',['uses' =>'UpdateController@updatePurchase' ]);
-    $router->get('/api/{role}/extended/purchase',['uses' => 'GetController@getExtendedPurchase']);
-    $router->get('/api/{role}/due/purchase',['uses' => 'GetController@getDuePurchase']);
-    $router->get('/api/{role}/full_paid/purchase',['uses' => 'GetController@getFullPaidPurchase']);
-});
-
 ///get data API
 $router->get('/api/suppliers',['uses' => 'GetController@getSuppliers']);
 $router->get('/api/categories',['uses' => 'GetController@getCategories']);
@@ -82,16 +64,28 @@ $router->get('/api/subcategory/product',['uses'=>'GetController@getSubCategoryWi
 $router->get('/api/roles',['uses' => 'GetController@getRoles']);
 
 
+$router->group(['middleware' => 'auth'], function () use ($router){
+    $router->post('/api/{role}/supplier/store',['uses' => 'PostController@storeSuppliers']);
+    $router->post('/api/{role}/category/store',['uses' => 'PostController@storeCategories']);
+    $router->post('/api/{role}/color/store',['uses' => 'PostController@storeColors']);
+    $router->post('/api/{role}/size/store',['uses' => 'PostController@storeSizes']);
+    $router->post('/api/{role}/buyer/store',['uses' => 'PostController@storeBuyers']);
+    $router->post('/api/{role}/subcategory/store',['uses' => 'PostController@storeSubCategories']);
+    $router->post('/api/{role}/purchase/product/store',['uses' => 'PostController@storePurchasedProduct']);
+    $router->post('/api/{role}/sales/product/store',['uses' => 'PostController@storeSoldProduct']);
 
-$router->group(['middleware' => 'accounts'], function () use ($router){
+    ////Updates Routes
+
+    $router->post('/api/{role}/purchase/product/update',['uses' =>'UpdateController@updatePurchase' ]);
+    $router->get('/api/{role}/extended/purchase',['uses' => 'GetController@getExtendedPurchase']);
+    $router->get('/api/{role}/due/purchase',['uses' => 'GetController@getDuePurchase']);
+    $router->get('/api/{role}/full_paid/purchase',['uses' => 'GetController@getFullPaidPurchase']);
+
+
     $router->post('/api/{role}/purchase/price/store',['uses' => 'PostController@storePurchasedProductPrice']);
     $router->post('/api/{role}/purchase/price/update',['uses' => 'UpdateController@updatePurchasedProductPrice']);
     $router->post('/api/{role}/sale/price/store',['uses' => 'PostController@storeSoldProductPrice']);
 
-
-});
-
-$router->group(['middleware' => 'super'], function () use ($router){
     $router->get('/api/{role}/journal',['uses' => 'GetController@getJournal']);
     $router->get('/api/{role}/ledgers',['uses' => 'GetController@getLedgers']);
     $router->get('/api/{role}/trailbalances',['uses' => 'GetController@getLedgers']);
