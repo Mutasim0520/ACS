@@ -25,7 +25,7 @@ class IndexController extends Controller
         ]);
 
         try{
-            $user =User::with('role')->where([['email' , '=' , $request->email],['password' , '=' , $request->password]])->first();
+            $user =User::where([['email' , '=' , $request->email],['password' , '=' , $request->password]])->first();
             if($user){
                 $response = [
                     'status' => 'Ok',
@@ -86,12 +86,8 @@ class IndexController extends Controller
             $user->name = $request->name;
             $user->email = $request->email;
             $user->password = $request->password;
-            $user->role = $request->role;
+            $user->role = json_encode($request->role);
             $user->save();
-            foreach ($request->roles as $item){
-
-            }
-
             $user = User::orderBy('id','DESC')->first();
             $token = Hash::make($user->id.mt_rand(1000,10000).time());
             $user->api_token = $token;
@@ -102,7 +98,7 @@ class IndexController extends Controller
                 'status' => 'Ok',
                 'user' =>$user
             ];
-            return json_encode($response);
+            return json_encode($response,200);
         }catch(Exception $exception){
             $response = [
                 'status' => 'Internal Server Error',
@@ -111,6 +107,4 @@ class IndexController extends Controller
             return json_encode($response);
         }
     }
-
-    //
 }
