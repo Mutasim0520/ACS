@@ -942,7 +942,6 @@ class GetController extends Controller
 
     public function filterStock(Request $request){
         $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier'])->where('stock','>',0)->orderBy('id','DESC')->get();
-        //return response(json_encode($products));
         $list = [];
         foreach($products as $item){
             $prd = new \stdClass();
@@ -961,13 +960,14 @@ class GetController extends Controller
         }
         $new_list = [];
         if ($request->category_id > 0 && $request->sub_category_id > 0 && $request->supplier_id > 0){
+
             foreach ($list as $item){
                 if($item->category->id == $request->category_id && $item->sub_category->id == $request->sub_category_id && $item->supplier->id == $request->supplier_id ){
                     $new_list[] = $item;
                 }
             }
         }
-        elseif ($request->category_id > 0 && $request->sub_category_id){
+        elseif ($request->category_id > 0 && $request->sub_category_id > 0){
             foreach ($list as $item){
                 if($item->category->id == $request->category_id && $item->sub_category->id == $request->sub_category_id){
                     $new_list[] = $item;
@@ -988,7 +988,7 @@ class GetController extends Controller
                 }
             }
         }
-        elseif ($request->category_id){
+        elseif ($request->category_id >0){
             foreach ($list as $item){
                 if($item->category->id == $request->category_id){
                     $new_list[] = $item;
@@ -1009,7 +1009,11 @@ class GetController extends Controller
                 }
             }
         }
-
+        else{
+            foreach ($list as $item){
+                $new_list[] = $item;
+            }
+        }
         return response(json_encode($new_list),201);
 
     }
