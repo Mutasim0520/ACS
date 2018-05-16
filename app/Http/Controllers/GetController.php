@@ -264,7 +264,7 @@ class GetController extends Controller
                     $object = new \stdClass();
                     $object->account = $item2->name;
                     $object->value = $item2->pivot->value;
-                    $object->date = $item2->updated_at;
+                    $object->date = $item->created_at;
                     $ledgers[] = $object;
                 }
             }
