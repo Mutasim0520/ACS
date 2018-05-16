@@ -426,8 +426,8 @@ class PostController extends Controller
                     $value = $item->partial;
                     $narration_2 = "Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check.";
                     $this->setIntoJournal($supplier->company,'Dr',$amount,$journal_2);
-                    $this->setIntoJournal('Cash','Cr',$value->cash,$journal);
-                    $this->setIntoJournal($check,'Cr',$value->check,$journal);
+                    $this->setIntoJournal('Cash','Cr',$value->cash,$journal_2);
+                    $this->setIntoJournal($check,'Cr',$value->check,$journal_2);
                 }
             }
 
@@ -506,8 +506,8 @@ class PostController extends Controller
                     $value = $item->partial;
                     $narration_2 = "Recieved from $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check.";
                     $this->setIntoJournal($buyer->company,'Cr',$amount,$journal_2);
-                    $this->setIntoJournal('Cash','Dr',$value->cash,$journal);
-                    $this->setIntoJournal($check,'Dr',$value->check,$journal);
+                    $this->setIntoJournal('Cash','Dr',$value->cash,$journal_2);
+                    $this->setIntoJournal($check,'Dr',$value->check,$journal_2);
                 }
             }
 
