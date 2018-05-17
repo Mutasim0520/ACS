@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Sub_categorie;
 use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +18,7 @@ use App\Ledger as Ledgers;
 use App\Ledger_categorie as Ledger_category;
 use Mockery\CountValidator\Exception;
 use App\Role as Roles;
-use App\Sub_categorie as SubCategory;
+use App\User as Admins;
 
 class GetController extends Controller
 {
@@ -1020,6 +1019,25 @@ class GetController extends Controller
         }
         return response(json_encode($new_list),201);
 
+    }
+
+    public function getAdmins(){
+        try{
+            $admins = Admins::orderBy('name','ASC')->get();
+            return response(json_encode($admins),201);
+        }catch (Exception $e){
+            return response('error',500);
+        }
+
+    }
+
+    public function getIndivisualAdmin(Request $request){
+        try{
+            $admin = Admins::where('id',$request->id)->first();
+            return response(json_encode($admin),204);
+        }catch (Exception $e){
+            return response('error',500);
+        }
     }
 
 }

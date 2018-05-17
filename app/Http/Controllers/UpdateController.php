@@ -27,6 +27,7 @@ use App\Journal as Journals;
 use App\Ledger_categorie as Ledger_category;
 use App\Accounts_purchase_historie as Accounts_purchase_history;
 use App\Accounts_sale_historie as Accounts_sale_history;
+use App\User as Admins;
 
 class UpdateController extends Controller
 {
@@ -849,8 +850,9 @@ class UpdateController extends Controller
                 }
                 elseif($type == '3'){
                     $value = $item->partial;
+                    $paid = intval($value->cash)+intval($value->check);
                     $narration_2 = "Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($supplier->company,'Dr',$amount,$journal_2);
+                    $this->setIntoJournal($supplier->company,'Dr',$paid,$journal_2);
                     $this->setIntoJournal('Cash','Cr',$value->cash,$journal_2);
                     $this->setIntoJournal($check,'Cr',$value->check,$journal_2);
                 }
@@ -929,8 +931,9 @@ class UpdateController extends Controller
                 }
                 elseif($type == '3'){
                     $value = $item->partial;
+                    $paid = intval($value->cash)+intval($value->check);
                     $narration_2 = "Recieved from $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($buyer->company,'Cr',$amount,$journal_2);
+                    $this->setIntoJournal($buyer->company,'Cr',$paid,$journal_2);
                     $this->setIntoJournal('Cash','Dr',$value->cash,$journal_2);
                     $this->setIntoJournal($check,'Dr',$value->check,$journal_2);
                 }
@@ -1017,6 +1020,30 @@ class UpdateController extends Controller
             $product->save();
         }
         return $add;
+    }
+
+    public function updateAdmin(Request $request){
+        try{
+            $admin = Admins::where('id',$request->id)->first();
+            $admin->name = $request->name;
+            $admin->email = $request->email;
+            $admin->password = $request->password;
+            $admin->roles = json_encode($request->roles);
+            $admin->save();
+            return response('updated',204);
+        }catch (Exception $e){
+            return response('error',500);
+        }
+    }
+
+    public function deleteAdmin(Request $request){
+        try{
+        $admin = Admins::where('id',$request->id)->first();
+        $admin->delete();
+        return response('deleted',204);
+    }catch (Exception $e){
+        return response('error',500);
+}
     }
 
 

@@ -112,6 +112,10 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->post('/api/update/sale',['uses' => 'UpdateController@updateSale']);
    $router->get('/api/filter/stock',['uses' => 'GetController@filterStock']);
    $router->get('/api/profit-loss',['uses' => 'GetController@getProfitAndLossAccount']);
+   $router->get('/api/admins',['uses' => 'GetController@getAdmins']);
+   $router->post('/api/update/admins',['uses' => 'UpdateController@updateAdmins']);
+   $router->post('/api/delete/admins',['uses' => 'UpdateController@deleteAdmins']);
+   $router->get('/api/indivisual/admin',['uses' => 'GetController@getIndivisualAdmin']);
 
 });
 
