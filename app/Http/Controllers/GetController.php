@@ -1040,4 +1040,30 @@ class GetController extends Controller
         }
     }
 
+    public function search(Request $request){
+        try{
+            $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier'])->search('name',$request->text)->orderBy('name','ASC')->get();
+            $list = [];
+            foreach($products as $item){
+                $prd = new \stdClass();
+                $prd->id = $item->id;
+                $prd->name = $item->name;
+                $prd->category = $item->categorie;
+                $prd->sub_category = $item->sub_categorie;
+                $prd->supplier = $item->purchase->supplier;
+                $prd->created_at = $item->created_at;
+                $prd->meta = $item->meta;
+                $prd->stock = $item->stock;
+                $prd->initial_stock = $item->initial_stock;
+                $prd->images = $item->product_image;
+                $prd->colors = $this->getColorWiseSizeQuantity($item->color,$item->size);
+                $list[] = $prd;
+            }
+            return response(json_encode($list),201);
+
+        }catch(Exception $e){
+            return response('error',500);
+        }
+    }
+
 }

@@ -62,6 +62,7 @@ $router->get('/api/subcategory/product',['uses'=>'GetController@getSubCategoryWi
 
 
 $router->get('/api/roles',['uses' => 'GetController@getRoles']);
+$router->get('/api/search',['uses' => 'GetController@search']);
 
 
 $router->group(['middleware' => 'auth'], function () use ($router){
