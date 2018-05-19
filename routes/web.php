@@ -114,8 +114,8 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->get('/api/filter/stock',['uses' => 'GetController@filterStock']);
    $router->get('/api/profit-loss',['uses' => 'GetController@getProfitAndLossAccount']);
    $router->get('/api/admins',['uses' => 'GetController@getAdmins']);
-   $router->post('/api/update/admins',['uses' => 'UpdateController@updateAdmins']);
-   $router->post('/api/delete/admins',['uses' => 'UpdateController@deleteAdmins']);
+   $router->post('/api/update/admin/{id}',['uses' => 'UpdateController@updateAdmin']);
+   $router->delete('/api/delete/admin',['uses' => 'UpdateController@deleteAdmin']);
    $router->get('/api/indivisual/admin',['uses' => 'GetController@getIndivisualAdmin']);
 
 });

@@ -86,7 +86,7 @@ class IndexController extends Controller
             $user->name = $request->name;
             $user->email = $request->email;
             $user->password = $request->password;
-            $user->roles = json_encode($request->roles);
+            $user->role = json_encode($request->role);
             $user->save();
             $user = User::orderBy('id','DESC')->first();
             $token = Hash::make($user->id.mt_rand(1000,10000).time());

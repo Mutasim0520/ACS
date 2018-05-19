@@ -1022,15 +1022,16 @@ class UpdateController extends Controller
         return $add;
     }
 
-    public function updateAdmin(Request $request){
+    public function updateAdmin(Request $request, $id){
         try{
-            $admin = Admins::where('id',$request->id)->first();
+
+            $admin = Admins::find($id);
             $admin->name = $request->name;
             $admin->email = $request->email;
             $admin->password = $request->password;
-            $admin->roles = json_encode($request->roles);
+            $admin->role = json_encode($request->role);
             $admin->save();
-            return response('updated',204);
+            return response('updated',201);
         }catch (Exception $e){
             return response('error',500);
         }
@@ -1040,7 +1041,7 @@ class UpdateController extends Controller
         try{
         $admin = Admins::where('id',$request->id)->first();
         $admin->delete();
-        return response('deleted',204);
+        return response('deleted',201);
     }catch (Exception $e){
         return response('error',500);
 }

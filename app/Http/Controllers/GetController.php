@@ -1033,8 +1033,8 @@ class GetController extends Controller
 
     public function getIndivisualAdmin(Request $request){
         try{
-            $admin = Admins::where('id',$request->id)->first();
-            return response(json_encode($admin),204);
+            $admin = Admins::find($request->id);
+            return response(json_encode($admin),201);
         }catch (Exception $e){
             return response('error',500);
         }
@@ -1042,7 +1042,7 @@ class GetController extends Controller
 
     public function search(Request $request){
         try{
-            $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier'])->search('name',$request->text)->orderBy('name','ASC')->get();
+            $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier'])->where('name','LIKE','%'.$request->text.'%')->orderBy('name','ASC')->get();
             $list = [];
             foreach($products as $item){
                 $prd = new \stdClass();
