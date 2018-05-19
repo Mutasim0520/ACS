@@ -23,11 +23,6 @@ use App\User as Admins;
 class GetController extends Controller
 {
 
-    public function __construct()
-    {
-        $this->middleware('auth',['except' => ['getProducts']]);
-    }
-
     public function checkDuplicate(Request $request){
         $tables = ['color' => 'colors' , 'buyer' => 'buyers' , 'supplier' => 'suppliers' , 'size' => 'sizes' , 'product' => 'products' , 'category' => 'categories' , 'sub_category' => 'sub_categories','email' => 'users'];
         $item = $request->item;
@@ -63,7 +58,7 @@ class GetController extends Controller
     public function getCategories(){
         $category = Category::with(['sub_category' => function ($query){
             return $query->orderBy('name','ASC');
-        }])->get();
+        }])->orderBy('name','ASC')->get();
         return response(json_encode($category),200);
     }
 
@@ -78,7 +73,7 @@ class GetController extends Controller
     }
 
     public function getProducts(){
-        $products = Products::with(['size','color','product_image'])->where('stock','>',0)->orderBy('name','ASC')->get();
+        $products = Products::with(['size','color','product_image'])->orderBy('name','ASC')->get();
         $list = [];
         foreach($products as $item){
             $prd = new \stdClass();

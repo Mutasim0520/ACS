@@ -1028,7 +1028,6 @@ class UpdateController extends Controller
             $admin = Admins::find($id);
             $admin->name = $request->name;
             $admin->email = $request->email;
-            $admin->password = $request->password;
             $admin->role = json_encode($request->role);
             $admin->save();
             return response('updated',201);

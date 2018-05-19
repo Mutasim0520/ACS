@@ -31,38 +31,38 @@ $router->get('/test',[
 
 
 ///get data API
-$router->get('/api/suppliers',['uses' => 'GetController@getSuppliers']);
-$router->get('/api/categories',['uses' => 'GetController@getCategories']);
-$router->get('/api/products',['uses' => 'GetController@getProducts']);
-$router->get('/api/colors',['uses' => 'GetController@getColors']);
-$router->get('/api/sizes',['uses' => 'GetController@getSizes']);
-$router->get('/api/buyers',['uses' => 'GetController@getBuyers']);
-$router->get('/api/all/purchases',['uses' => 'GetController@getAllPurchases']);
-$router->get('/api/incomplete/purchases',['uses' => 'GetController@getIncompletePurchases']);
-$router->get('/api/due/purchases',['uses' => 'GetController@getDuePurchase']);
-$router->get('/api/paid/purchases',['uses' => 'GetController@getFullPaidPurchase']);
-$router->get('/api/complete/purchases',['uses' => 'GetController@getCompletePurchases']);
-$router->get('/api/extended/purchases',['uses' => 'GetController@getExtendedPurchase']);
-$router->get('/api/all/sales',['uses' => 'GetController@getAllSales']);
-$router->get('/api/incomplete/sales',['uses' => 'GetController@getIncompleteSales']);
-$router->get('/api/complete/sales',['uses' => 'GetController@getCompleteSales']);
-$router->get('/api/due/sales',['uses' => 'GetController@getDueSale']);
-$router->get('/api/paid/sales',['uses' => 'GetController@getFullPaidSale']);
-$router->get('/api/extended/sales',['uses' => 'GetController@getExtendedSale']);
-$router->get('/api/check/duplicate/{item}/{value}',['uses' =>'GetController@checkDuplicate']);
-$router->get('/api/available/products',['uses' =>'GetController@getAvailableProducts']);
-$router->get('/api/indivisual/product',['uses' =>'GetController@getIndivisualProduct']);
-$router->get('/api/ledger/groups',['uses' =>'GetController@getLedgerCategories']);
-$router->get('/api/ledgers/list',['uses' =>'GetController@getLedgerList']);
-$router->get('/api/{role}/purchaseWiseReport',['uses' => 'GetController@getPurchaseWiseReport']);
-$router->get('/api/{role}/indivisual/purchase',['uses' => 'GetController@getIndivisualPurchase']);
-$router->get('/api/{role}/indivisual/sale',['uses' => 'GetController@getIndivisualSale']);
-$router->get('/api/category/product',['uses'=>'GetController@getCategoryWiseProduct']);
-$router->get('/api/subcategory/product',['uses'=>'GetController@getSubCategoryWiseProduct']);
+    $router->get('/api/suppliers',['uses' => 'GetController@getSuppliers']);
+    $router->get('/api/categories',['uses' => 'GetController@getCategories']);
+    $router->get('/api/products',['uses' => 'GetController@getProducts']);
+    $router->get('/api/colors',['uses' => 'GetController@getColors']);
+    $router->get('/api/sizes',['uses' => 'GetController@getSizes']);
+    $router->get('/api/buyers',['uses' => 'GetController@getBuyers']);
+    $router->get('/api/all/purchases',['uses' => 'GetController@getAllPurchases']);
+    $router->get('/api/incomplete/purchases',['uses' => 'GetController@getIncompletePurchases']);
+    $router->get('/api/due/purchases',['uses' => 'GetController@getDuePurchase']);
+    $router->get('/api/paid/purchases',['uses' => 'GetController@getFullPaidPurchase']);
+    $router->get('/api/complete/purchases',['uses' => 'GetController@getCompletePurchases']);
+    $router->get('/api/extended/purchases',['uses' => 'GetController@getExtendedPurchase']);
+    $router->get('/api/all/sales',['uses' => 'GetController@getAllSales']);
+    $router->get('/api/incomplete/sales',['uses' => 'GetController@getIncompleteSales']);
+    $router->get('/api/complete/sales',['uses' => 'GetController@getCompleteSales']);
+    $router->get('/api/due/sales',['uses' => 'GetController@getDueSale']);
+    $router->get('/api/paid/sales',['uses' => 'GetController@getFullPaidSale']);
+    $router->get('/api/extended/sales',['uses' => 'GetController@getExtendedSale']);
+    $router->get('/api/check/duplicate/{item}/{value}',['uses' =>'GetController@checkDuplicate']);
+    $router->get('/api/available/products',['uses' =>'GetController@getAvailableProducts']);
+    $router->get('/api/indivisual/product',['uses' =>'GetController@getIndivisualProduct']);
+    $router->get('/api/ledger/groups',['uses' =>'GetController@getLedgerCategories']);
+    $router->get('/api/ledgers/list',['uses' =>'GetController@getLedgerList']);
+    $router->get('/api/{role}/purchaseWiseReport',['uses' => 'GetController@getPurchaseWiseReport']);
+    $router->get('/api/{role}/indivisual/purchase',['uses' => 'GetController@getIndivisualPurchase']);
+    $router->get('/api/{role}/indivisual/sale',['uses' => 'GetController@getIndivisualSale']);
+    $router->get('/api/category/product',['uses'=>'GetController@getCategoryWiseProduct']);
+    $router->get('/api/subcategory/product',['uses'=>'GetController@getSubCategoryWiseProduct']);
 
 
-$router->get('/api/roles',['uses' => 'GetController@getRoles']);
-$router->get('/api/search',['uses' => 'GetController@search']);
+    $router->get('/api/roles',['uses' => 'GetController@getRoles']);
+    $router->get('/api/search',['uses' => 'GetController@search']);
 
 
 $router->group(['middleware' => 'auth'], function () use ($router){
