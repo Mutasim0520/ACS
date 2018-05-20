@@ -425,7 +425,6 @@ class UpdateController extends Controller
 
                 $history = json_decode( $purchase->accounts_purchase_historie[0]->history);
                 $transport = json_decode($this->compareHistory($history,$input,'transport'));
-                $vat = json_decode($this->compareHistory($history,$input,'vat'));
                 $labour = json_decode($this->compareHistory($history,$input,'labour'));
                 $others = json_decode($this->compareHistory($history,$input,'others'));
 

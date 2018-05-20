@@ -171,12 +171,16 @@ class GetController extends Controller
     }
 
     public function getAllPurchases(){
-        $purchases = Purchases::with('supplier','product','purchase_historie')->orderBy('id','DESC')->get();
+        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
+            return $query->orderBy('id','DESC')->first();
+        }])->orderBy('id','DESC')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getIncompletePurchases(){
-        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie')->orderBy('id','DESC')->where('status','0')->get();
+        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
+            return $query->orderBy('id','DESC')->first();
+        }])->orderBy('id','DESC')->where('status','0')->get();
         return response(($purchases),200);
     }
 
@@ -202,24 +206,32 @@ class GetController extends Controller
     }
 
     public function getCompletePurchases(){
-        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie')->orderBy('id','DESC')->where('status','complete')->get();
+        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
+            return $query->orderBy('id','DESC')->first();
+        }])->orderBy('id','DESC')->where('status','complete')->get();
         return response(($purchases),200);
     }
 
     public function getAllSales(){
-        $sales = Sales::with('buyer','sales_historie','product')->orderBy('id','DESC')->get();
+        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
+            return $query->orderBy('id','DESC')->first();
+        }])->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getIncompleteSales()
     {
-        $sales = Sales::with('buyer','sales_historie','product')->where('status', '0')->orderBy('id','DESC')->get();
+        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
+        return $query->orderBy('id','DESC')->first();
+    }])->where('status', '0')->orderBy('id','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
     public function getCompleteSales()
     {
-        $sales = Sales::with('buyer','sales_historie','product')->where('status', 'complete')->orderBy('id','DESC')->get();
+        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
+            return $query->orderBy('id','DESC')->first();
+        }])->where('status', 'complete')->orderBy('id','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
@@ -400,6 +412,7 @@ class GetController extends Controller
     }
 
     public function getTimeWisePurchase(Request $request){
+        date_default_timezone_set('Asia/Dhaka');
         $time = $request->time;
         if($time == 'today'){
             $hour = 12;
@@ -440,6 +453,7 @@ class GetController extends Controller
     }
 
     public function getTimeWiseSale(Request $request){
+        date_default_timezone_set('Asia/Dhaka');
         $time = $request->time;
         if($time == 'today'){
             $hour = 12;
