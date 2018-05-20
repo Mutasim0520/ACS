@@ -171,87 +171,75 @@ class GetController extends Controller
     }
 
     public function getAllPurchases(){
-        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
-        }])->orderBy('id','DESC')->get();
+        $purchases = Purchases::with('supplier','product','purchase_historie')->orderBy('id','DESC')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getIncompletePurchases(){
-        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
-        }])->orderBy('id','DESC')->where('status','0')->get();
+        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie')->orderBy('id','DESC')->where('status','0')->get();
         return response(($purchases),200);
     }
 
     public function getExtendedPurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->orderBy('id','DESC')->where('status','extended')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getDuePurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->orderBy('id','DESC')->where('payment_status','due')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getFullPaidPurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->orderBy('id','DESC')->where('payment_status','paid')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getCompletePurchases(){
-        $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
-        }])->orderBy('id','DESC')->where('status','complete')->get();
+        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie')->orderBy('id','DESC')->where('status','complete')->get();
         return response(($purchases),200);
     }
 
     public function getAllSales(){
-        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
-            return $query->orderBy('id','DESC')->first();
-        }])->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product')->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getIncompleteSales()
     {
-        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
-        return $query->orderBy('id','DESC')->first();
-    }])->where('status', '0')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product')->where('status', '0')->orderBy('id','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
     public function getCompleteSales()
     {
-        $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie'=> function($query){
-            return $query->orderBy('id','DESC')->first();
-        }])->where('status', 'complete')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product')->where('status', 'complete')->orderBy('id','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
     public function getDueSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->where('payment_status','due')->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getFullPaidSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->where('payment_status','paid')->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getExtendedSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
-            return $query->orderBy('id','DESC')->first();
+            return $query->orderBy('id','DESC');
         }])->where('status','extended')->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
@@ -426,7 +414,6 @@ class GetController extends Controller
         else if($time == 'yesterday'){
             $hour = 12;
             $to             = strtotime($hour . ':00:00');
-            $to          = strtotime('-1 day', $to);
             $from          = strtotime('-1 day', $to);
             $from = date('Y-m-d H:i:s', ($from));
             $to = date('Y-m-d H:i:s', ($to));
@@ -467,7 +454,6 @@ class GetController extends Controller
         else if($time == 'yesterday'){
             $hour = 12;
             $to             = strtotime($hour . ':00:00');
-            $to          = strtotime('-1 day', $to);
             $from          = strtotime('-1 day', $to);
             $from = date('Y-m-d H:i:s', ($from));
             $to = date('Y-m-d H:i:s', ($to));
@@ -558,7 +544,9 @@ class GetController extends Controller
     }
 
     public function getBankAccountsLedgers(){
-        $ledgers = Ledger_category::with(['ledger'])->where('name','Bank Account')->first();
+        $ledgers = Ledger_category::with(['ledger' => function($query){
+            return $query->orderBy('name','ASC');}
+        ])->where('name','Bank Account')->first();
         $list = [];
         foreach ($ledgers->ledger as $item){
             $list[] = $item;
