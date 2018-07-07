@@ -286,12 +286,15 @@ class GetController extends Controller
     }
 
     public function prepareLedgers($from,$to,$id){
+        ////cause the timestamp will be y:m:d 00:00:00
+        $to = date('Y-m-d H:i:s', strtotime(' +1 day',strtotime($to)));
+        $from = date('Y-m-d H:i:s', strtotime($from));
+
         $targeted_day = date('Y-m-d H:i:s', strtotime(' -1 day',strtotime($to)));
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
-            $from = date('Y-m-d H:i:s', strtotime($from));
-            $to = date('Y-m-d H:i:s', strtotime($to));
-            $query->whereBetween('created_at',[$from,$to]);
+            return $query->whereBetween('created_at',[$from,$to]);
         }])->where('id',$id)->get();
+
         $beginning = date('Y-m-d H:i:s',strtotime('2018-1-1'));
         $opening_balance_ledger = Ledgers::with(['journal' => function($query) use($beginning,$targeted_day){
             $from = date('Y-m-d H:i:s', strtotime($beginning));
