@@ -290,7 +290,8 @@ class GetController extends Controller
         $to = date('Y-m-d H:i:s', strtotime(' +1 day',strtotime($to)));
         $from = date('Y-m-d H:i:s', strtotime($from));
 
-        $targeted_day = date('Y-m-d H:i:s', strtotime(' -1 day',strtotime($to)));
+        $targeted_day = date('Y-m-d H:i:s', strtotime($to));
+        
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
             return $query->whereBetween('created_at',[$from,$to]);
         }])->where('id',$id)->get();
