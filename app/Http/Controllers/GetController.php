@@ -291,7 +291,7 @@ class GetController extends Controller
         $from = date('Y-m-d H:i:s', strtotime($from));
 
         $targeted_day = date('Y-m-d H:i:s', strtotime($to));
-        
+
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
             return $query->whereBetween('created_at',[$from,$to]);
         }])->where('id',$id)->get();
@@ -661,22 +661,15 @@ class GetController extends Controller
         $total_sale_value = 0;
         $total_stock_value = 0;
         foreach ($purchase->products as $item){
-            $total_purchase_value = $total_purchase_value+($item->stock*$item->unit_price);
+            $total_purchase_value = $total_purchase_value+($item->initial_stock*$item->unit_price);
+            $total_stock_value = $total_stock_value+($item->unit_price*$item->stock);
         }
 
         $total_purchase_value = $total_purchase_value+$purchase->transport+$purchase->labour+$purchase->other+$purchase->discount;
         foreach ($sales as $sale){
             $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
         }
-
-        foreach ($sales as $sale){
-            foreach ($purchase->products as $item){
-                if($sale->product->id == $item->id){
-                    $total_stock_value = $total_stock_value+($item->unit_price*$sale->product->total_amount);
-                }
-            }
-        }
-
+        
         $gross_pl = $total_sale_value-$total_purchase_value;
         $net_pl = $gross_pl+$total_stock_value;
 
