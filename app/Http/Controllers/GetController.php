@@ -669,7 +669,7 @@ class GetController extends Controller
         foreach ($sales as $sale){
             $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
         }
-        
+
         $gross_pl = $total_sale_value-$total_purchase_value;
         $net_pl = $gross_pl+$total_stock_value;
 
