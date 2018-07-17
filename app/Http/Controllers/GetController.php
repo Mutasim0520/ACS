@@ -19,6 +19,7 @@ use App\Ledger_categorie as Ledger_category;
 use Mockery\CountValidator\Exception;
 use App\Role as Roles;
 use App\User as Admins;
+use Carbon\Carbon;
 
 class GetController extends Controller
 {
@@ -407,36 +408,26 @@ class GetController extends Controller
         date_default_timezone_set('Asia/Dhaka');
         $time = $request->time;
         if($time == 'today'){
-            $hour = 12;
-            $from              = strtotime($hour . ':00:00');
-            $to          = strtotime('+1 day', $from);
-            $from = date('Y-m-d H:i:s', ($from));
-            $to = date('Y-m-d H:i:s',($to));
+            $from = Carbon::today();
+            $to = Carbon::tomorrow();
             $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         else if($time == 'yesterday'){
-            $hour = 12;
-            $to             = strtotime($hour . ':00:00');
-            $from          = strtotime('-1 day', $to);
-            $from = date('Y-m-d H:i:s', ($from));
-            $to = date('Y-m-d H:i:s', ($to));
+            $from = Carbon::yesterday();
+            $to = Carbon::today();
             $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         elseif ($time == 'week'){
-            $from = date("M-d-y", strtotime('last sunday'));
-            $to = date("M-d-y", strtotime('last sunday', strtotime('next week', time())));
-            $from = date('Y-m-d H:i:s', strtotime($from));
-            $to = date('Y-m-d H:i:s', strtotime($to));
+            $from = Carbon::now()->startOfWeek();
+            $to = Carbon::now()->endOfWeek();
             $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         elseif ($time == 'month'){
-            $from = date('Y-m-01');
-            $to  = date('Y-m-t');
-            $from = date('Y-m-d H:i:s', strtotime($from));
-            $to = date('Y-m-d H:i:s', strtotime($to));
+            $from = Carbon::now()->startOfMonth();
+            $to = Carbon::now()->endOfMonth();
             $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($purchases),201);
 
@@ -447,36 +438,26 @@ class GetController extends Controller
         date_default_timezone_set('Asia/Dhaka');
         $time = $request->time;
         if($time == 'today'){
-            $hour = 12;
-            $from              = strtotime($hour . ':00:00');
-            $to          = strtotime('+1 day', $from);
-            $from = date('Y-m-d H:i:s', ($from));
-            $to = date('Y-m-d H:i:s',($to));
+            $from = Carbon::today();
+            $to = Carbon::tomorrow();
             $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($sales),201);
         }
         else if($time == 'yesterday'){
-            $hour = 12;
-            $to             = strtotime($hour . ':00:00');
-            $from          = strtotime('-1 day', $to);
-            $from = date('Y-m-d H:i:s', ($from));
-            $to = date('Y-m-d H:i:s', ($to));
+            $from = Carbon::yesterday();
+            $to = Carbon::today();
             $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
-            return response(json_encode($sales),201);;
+            return response(json_encode($sales),201);
         }
         elseif ($time == 'week'){
-            $from = date("M-d-y", strtotime('last sunday'));
-            $to = date("M-d-y", strtotime('last sunday', strtotime('next week', time())));
-            $from = date('Y-m-d H:i:s', strtotime($from));
-            $to = date('Y-m-d H:i:s', strtotime($to));
+            $from = Carbon::now()->startOfWeek();
+            $to = Carbon::now()->endOfWeek();
             $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($sales),201);
         }
         elseif ($time == 'month'){
-            $from = date('Y-m-01');
-            $to  = date('Y-m-t');
-            $from = date('Y-m-d H:i:s', strtotime($from));
-            $to = date('Y-m-d H:i:s', strtotime($to));
+            $from = Carbon::now()->startOfMonth();
+            $to = Carbon::now()->endOfMonth();
             $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
             return response(json_encode($sales),201);
 
