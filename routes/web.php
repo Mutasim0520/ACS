@@ -19,17 +19,6 @@ $router->post('/api/login',[
     'uses' => 'IndexController@login'
 ]);
 
-$router->get('/api/ware',[
-    'middleare' => 'warehouse',
-    'uses' =>'IndexController@test'
-]);
-
-$router->get('/test',[
-    'middleware' =>'auth',
-    'uses' => 'IndexController@test'
-]);
-
-
 ///get data API
     $router->get('/api/suppliers',['uses' => 'GetController@getSuppliers']);
     $router->get('/api/categories',['uses' => 'GetController@getCategories']);

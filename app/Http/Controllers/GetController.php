@@ -288,20 +288,18 @@ class GetController extends Controller
 
     public function prepareLedgers($from,$to,$id){
         ////cause the timestamp will be y:m:d 00:00:00
-        $to = date('Y-m-d H:i:s', strtotime(' +1 day',strtotime($to)));
-        $from = date('Y-m-d H:i:s', strtotime($from));
-
-        $targeted_day = date('Y-m-d H:i:s', strtotime($to));
-
+        $targeted_day = Carbon::parse($to)->subDays(1);
+        $to = Carbon::parse($to)->addDays(1);
+        $from = Carbon::parse($from);
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
             return $query->whereBetween('created_at',[$from,$to]);
         }])->where('id',$id)->get();
 
         $beginning = date('Y-m-d H:i:s',strtotime('2018-1-1'));
+
         $opening_balance_ledger = Ledgers::with(['journal' => function($query) use($beginning,$targeted_day){
             $from = date('Y-m-d H:i:s', strtotime($beginning));
-            $to = date('Y-m-d H:i:s', strtotime($targeted_day));
-            $query->whereBetween('created_at',[$from,$to]);
+            $query->whereBetween('created_at',[$from,$targeted_day]);
         }])->where('id',$id)->get();
 
         $opening_balance = new \stdClass();
@@ -334,6 +332,8 @@ class GetController extends Controller
         }
 
         foreach ($ledgers as $item){
+            $balance = 0;
+            $type = 'N/A';
             if(sizeof($item->journal)>0){
                 $creditors = $this->findAccountForLedger($item->journal,$item,'Cr');
                 $debitors = $this->findAccountForLedger($item->journal,$item,'Dr');
