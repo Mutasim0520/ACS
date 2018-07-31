@@ -106,6 +106,11 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->post('/api/update/admin/{id}',['uses' => 'UpdateController@updateAdmin']);
    $router->delete('/api/delete/admin',['uses' => 'UpdateController@deleteAdmin']);
    $router->get('/api/indivisual/admin',['uses' => 'GetController@getIndivisualAdmin']);
+   //new apis
+   $router->get('/api/inactivate/user/{id}',['uses' => 'IndexController@inactivateUser']);
+   $router->get('/api/activate/user/{id}',['uses' => 'IndexController@activateUser']);
+   $router->post('/api/reset/password',['uses' => 'IndexController@resetPassword']);
+   $router->post('/api/update/user/role',['uses' => 'IndexController@updateUserRole']);
 
 });
 
