@@ -113,10 +113,25 @@ class PostController extends Controller
         $subcategory = ucwords(trim($request->subcategory));
         $signal = $this->duplicateChecker('sub_categories','name',$subcategory);
         if($signal == 'red'){
-            $response = [
-                "status" => "already exist"
-            ];
-            return response(json_encode($response),201);
+            $matched_sub_category = SubCategory::with('category')->where('name',$subcategory)->first();
+            foreach ($matched_sub_category->category as $item){
+                if($item->id == $request->category_id){
+                    $response = [
+                        "status" => "already exist"
+                    ];
+                    return response(json_encode($response),201);
+                }
+            }
+                $newSubCategory = SubCategory::where('name',$subcategory)->first();
+                $category = Category::find($request->category_id);
+
+                $newSubCategory->category()->save($category);
+                $response = [
+                    "status" => "New Item Created",
+                    "subcategory" =>$newSubCategory
+                ];
+                return response(json_encode($response),200);
+
         }
         else{
             $newSubCategory = new SubCategory();
