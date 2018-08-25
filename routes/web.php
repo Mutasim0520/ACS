@@ -44,6 +44,7 @@ $router->post('/api/login',[
     $router->get('/api/ledger/groups',['uses' =>'GetController@getLedgerCategories']);
     $router->get('/api/ledgers/list',['uses' =>'GetController@getLedgerList']);
     $router->get('/api/{role}/purchaseWiseReport',['uses' => 'GetController@getPurchaseWiseReport']);
+    $router->get('/api/saleWiseReport',['uses' => 'GetController@getSaleWiseReport']);
     $router->get('/api/{role}/indivisual/purchase',['uses' => 'GetController@getIndivisualPurchase']);
     $router->get('/api/{role}/indivisual/sale',['uses' => 'GetController@getIndivisualSale']);
     $router->get('/api/category/product',['uses'=>'GetController@getCategoryWiseProduct']);
@@ -83,6 +84,7 @@ $router->group(['middleware' => 'auth'], function () use ($router){
     $router->get('/api/{role}/timeWise/purchases',['uses' => 'GetController@getTimeWisePurchase']);
     $router->get('/api/{role}/timeWise/sales',['uses' => 'GetController@getTimeWiseSale']);
     $router->get('/api/{role}/supplierWise/reports',['uses' => 'GetController@getSupplierWiseReport']);
+    $router->get('/api/{role}/buyerWise/reports',['uses' => 'GetController@getBuyerWiseReport']);
     $router->post('/api/{role}/store/ledger',['uses' => 'PostController@storeNewLedger']);
     $router->post('/api/{role}/ledger/add/groups',['uses' =>'PostController@storeLedgerCategories']);
 });
@@ -111,6 +113,9 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->get('/api/activate/user/{id}',['uses' => 'IndexController@activateUser']);
    $router->post('/api/reset/password',['uses' => 'IndexController@resetPassword']);
    $router->post('/api/update/user/role',['uses' => 'IndexController@updateUserRole']);
+   //sales purchase return
+
+    $router->post('/api/sales/return',['uses' => 'PostController@handelSalesReturn']);
 
 });
 

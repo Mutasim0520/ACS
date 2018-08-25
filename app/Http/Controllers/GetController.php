@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\User;
 use Illuminate\Http\Request;
 use Auth;
 use Illuminate\Support\Facades\DB;
@@ -74,16 +75,21 @@ class GetController extends Controller
     }
 
     public function getProducts(){
-        $products = Products::with(['size','color','product_image'])->orderBy('name','ASC')->get();
+        $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier','purchase'])->orderBy('name','ASC')->get();
         $list = [];
         foreach($products as $item){
             $prd = new \stdClass();
             $prd->id = $item->id;
             $prd->name = $item->name;
+            $prd->category = $item->categorie;
+            $prd->sub_category = $item->sub_categorie;
+            $prd->purchase_id = $item->purchase->id;
+            $prd->supplier = $item->purchase->supplier;
             $prd->created_at = $item->created_at;
             $prd->meta = $item->meta;
             $prd->stock = $item->stock;
-            $prd->doc = $item->file;
+            $prd->initial_stock = $item->initial_stock;
+            $prd->images = $item->product_image;
             $prd->colors = $this->getColorWiseSizeQuantity($item->color,$item->size);
             $list[] = $prd;
         }
@@ -146,7 +152,7 @@ class GetController extends Controller
     }
 
     public function getAvailableProducts(){
-        $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier'])->where('stock','>',0)->orderBy('name','ASC')->get();
+        $products = Products::with(['size','color','product_image','categorie','sub_categorie','purchase.supplier','purchase'])->where([['stock','>',0],['purchase_unit_price','>',0]])->orderBy('name','ASC')->get();
         $list = [];
         foreach($products as $item){
             $prd = new \stdClass();
@@ -154,6 +160,7 @@ class GetController extends Controller
             $prd->name = $item->name;
             $prd->category = $item->categorie;
             $prd->sub_category = $item->sub_categorie;
+            $prd->purchase_id = $item->purchase->id;
             $prd->supplier = $item->purchase->supplier;
             $prd->created_at = $item->created_at;
             $prd->meta = $item->meta;
@@ -167,7 +174,7 @@ class GetController extends Controller
     }
 
     public function getBuyers(){
-        $buyer = Buyers::orderBy('company','ASC')->get();
+        $buyer = Buyers::with('sale','sale.product')->orderBy('company','ASC')->get();
         return response(json_encode($buyer),200);
     }
 
@@ -286,11 +293,16 @@ class GetController extends Controller
         }
     }
 
-    public function prepareLedgers($from,$to,$id){
+    public function prepareLedgers($from_date,$to_date,$id){
         ////cause the timestamp will be y:m:d 00:00:00
-        $targeted_day = Carbon::parse($to)->subDays(1);
-        $to = Carbon::parse($to)->addDays(1);
-        $from = Carbon::parse($from);
+        $targeted_day = Carbon::parse($to_date)->subDays(1);
+        $to = Carbon::parse($to_date)->addDays(1);
+        $from = Carbon::parse($from_date);
+        $obj = new \stdClass();
+//        $obj->from = $from;
+//        $obj->to = $to;
+//        $obj->targeted = $targeted_day;
+//        return json_encode($obj);
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
             return $query->whereBetween('created_at',[$from,$to]);
         }])->where('id',$id)->get();
@@ -601,9 +613,69 @@ class GetController extends Controller
                 }
             }
 
-            $p_l = $this->calculateProfitLoss($purchase_obj,$list_sale);
+            $p_l = $this->calculateProfitLoss($purchase_obj,$list_sale,"purchase");
             $obj->purchase = $purchase_obj;
             $obj->sales = $list_sale;
+            $obj->pl = json_decode($p_l);
+
+            return response(json_encode($obj),201);
+
+        }catch (Exception $e){
+            return response("error",500);
+        }
+    }
+
+    public function getSaleWiseReport(Request $request){
+        try{
+            $sale = Sales::with(['product','buyer','product.purchase',
+                'sales_historie' => function ($query){
+                    return $query->orderBy('created_at','DESC')->first();
+                }
+                ,'product.purchase.supplier'])->find($request->id);
+
+            $sales_obj = new \stdClass();
+            $sales_obj->id = $sale->id;
+            $sales_obj->reference = $sale->reference;
+            $sales_obj->buyer = $sale->buyer;
+            foreach ($sale->sales_historie as $his){
+                $history = json_decode($his->history);
+                foreach ($sale->product as $prd){
+                    foreach ($history->products as $item){
+                        //return $sale;
+                        if($item->id == $prd->id){
+                            $sold_products[] = json_decode($this->processSalesproductObject($his->history,$item->name,$prd->pivot,$item->id));
+                        }
+                    }
+                }
+                break;
+            }
+            $sales_obj->products = $sold_products;
+            //return json_encode($sales_obj);
+            foreach ($sale->product as $item){
+                $purchase_obj = new \stdClass();
+                $purchase_obj->product_id = $item->id;
+                $purchase_obj->product_name = $item->name;
+                $purchase_obj->unit_price = $item->purchase_unit_price;
+                $purchase_obj->initial_stock = $item->initial_stock;
+                $purchase_obj->stock = $item->stock;
+                $purchase_obj->id = $item->purchase->id;
+                $purchase_obj->created_at = $item->purchase->created_at;
+                $purchase_obj->reference = $item->purchase->reference;
+                $purchase_obj->supplier = $item->purchase->supplier;
+                $purchase_obj->transport = $item->purchase->transport;
+                $purchase_obj->vat = $item->purchase->vat;
+                $purchase_obj->discount = $item->purchase->discount;
+                $purchase_obj->other = $item->purchase->other;
+                $purchase_obj->labour = $item->purchase->labour;
+                $list_purchases[] = $purchase_obj;
+            }
+
+            //return $list_purchases;
+
+            $p_l = $this->calculateProfitLoss($list_purchases,$sales_obj,"sale");
+            $obj = new \stdClass();
+            $obj->purchase = $list_purchases;
+            $obj->sales = $purchase_obj;
             $obj->pl = json_decode($p_l);
 
             return response(json_encode($obj),201);
@@ -617,6 +689,13 @@ class GetController extends Controller
         $report = Suppliers::with(['purchase' => function($query){
             return $query->orderBy('id','DESC');
         },'purchase.product'])->where('id',$request->id)->first();
+        return response(($report),201);
+    }
+
+    public function getBuyerWiseReport(Request $request){
+        $report = Buyers::with(['sale' => function($query){
+            return $query->orderBy('id','DESC');
+        },'sale.product'])->where('id',$request->id)->first();
         return response(($report),201);
     }
 
@@ -636,22 +715,33 @@ class GetController extends Controller
 
     }
 
-    protected function calculateProfitLoss($purchase,$sales){
+    protected function calculateProfitLoss($purchase,$sales,$account){
         $pl_ob = new \stdClass();
         $total_purchase_value = 0;
         $total_sale_value = 0;
         $total_stock_value = 0;
-        foreach ($purchase->products as $item){
-            $total_purchase_value = $total_purchase_value+($item->initial_stock*$item->unit_price);
-            $total_stock_value = $total_stock_value+($item->unit_price*$item->stock);
+        if($account == "purchase"){
+            foreach ($purchase->products as $item){
+                $total_purchase_value = $total_purchase_value+($item->initial_stock*$item->unit_price);
+                $total_stock_value = $total_stock_value+($item->unit_price*$item->stock);
+            }
+
+            $total_purchase_value = $total_purchase_value+$purchase->transport+$purchase->labour+$purchase->other+$purchase->discount;
+            foreach ($sales->products as $sale){
+                $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
+            }
+        }
+        else{
+            foreach ($purchase as $item){
+                $total_purchase_value = $total_purchase_value+($item->initial_stock*$item->unit_price);
+                $total_stock_value = $total_stock_value+($item->unit_price*$item->stock);
+            }
+            foreach ($sales->products as $sale){
+                $total_sale_value = $total_sale_value+($sale->price * $sale->total_amount);
+            }
         }
 
-        $total_purchase_value = $total_purchase_value+$purchase->transport+$purchase->labour+$purchase->other+$purchase->discount;
-        foreach ($sales as $sale){
-            $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
-        }
-
-        $gross_pl = $total_sale_value-$total_purchase_value;
+        $gross_pl = $total_sale_value - $total_purchase_value;
         $net_pl = $gross_pl+$total_stock_value;
 
         $pl_ob->gross_pl = $gross_pl;
@@ -998,7 +1088,8 @@ class GetController extends Controller
 
     public function getAdmins(){
         try{
-            $admins = Admins::orderBy('name','ASC')->get();
+
+            $admins = Admins::orderBy('name','ASC')->where('id','!=',Auth::id())->get();
             return response(json_encode($admins),201);
         }catch (Exception $e){
             return response('error',500);

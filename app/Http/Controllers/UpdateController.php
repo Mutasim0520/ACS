@@ -160,8 +160,8 @@ class UpdateController extends Controller
                     $this->setAmounts($product,$item->colors);
                 }
 
-                $purchase->status = "extended";
-                $purchase->payment_status = "extended";
+                if($purchase->status != '0') $purchase->status = "extended";
+                if($purchase->payment_status)$purchase->payment_status = "extended";
                 $purchase->save();
             }
 
@@ -176,7 +176,9 @@ class UpdateController extends Controller
             $sale = Sales::with(['sales_historie' => function($query){
                 return $query->orderBy('created_at','DESC')->first();
             }])->where('id',$input->sale_id)->first();
+
             $old_history = json_decode($sale->sales_historie[0]->history);
+
             foreach ($old_history->products as $item){
                 $product = Products::where('id',$item->id)->first();
                 $amount_to_add = $this->adjustProductPreviousStock($product,$item->colors);
@@ -184,16 +186,26 @@ class UpdateController extends Controller
             }
 
             $prd = $input->products;
+
             foreach ($prd as $item){
                 $product = Products::where('id',$item->id)->first();
                 $amount_to_reduce = $this->updateProductStock($product,$item->colors);
                 $product->sale()->save($sale,['total_amount' => $amount_to_reduce]);
-
             }
-            $response = [
-                'message' => 'updated'
-            ];
-            return response(json_encode($response,201));
+            if(sizeof($prd > sizeof($old_history->products))){
+                if($sale->status != '0') $sale->status = "extended";
+                if($sale->payment_status)$sale->payment_status = "extended";
+            }
+            elseif (sizeof($prd == sizeof($old_history->products))){
+                foreach ($prd as $new_prd){
+                    foreach ($old_history->products as $old_prd){
+                        if($new_prd->id != $old_prd->id){
+                            if($sale->status != '0') $sale->status = "extended";
+                            if($sale->payment_status)$sale->payment_status = "extended";
+                        }
+                    }
+                }
+            }
 
         }catch (Exception $e){
             return response("Internal Server Error",500);

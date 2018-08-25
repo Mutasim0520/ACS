@@ -744,6 +744,10 @@ class PostController extends Controller
 
     }
 
+    protected function handelSalesReturn(Request $request){
+
+    }
+
     protected function createJournalEntry($narration,$user_id,$purchase_id,$account){
         $journal = new Journals();
         $journal->user_id = $user_id;
