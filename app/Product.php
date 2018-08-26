@@ -19,11 +19,11 @@ class Product extends Model
     }
 
     public function size(){
-        return $this->belongsToMany('App\Size','color_product_size')->withPivot('quantity');
+        return $this->belongsToMany('App\Size','color_product_size')->withPivot('quantity','defected');
     }
 
     public function color(){
-        return $this->belongsToMany('App\Color','color_product_size')->withPivot('quantity');
+        return $this->belongsToMany('App\Color','color_product_size')->withPivot('quantity','defected');
     }
 
     public function purchase(){

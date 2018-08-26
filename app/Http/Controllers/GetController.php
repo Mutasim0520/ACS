@@ -561,8 +561,6 @@ class GetController extends Controller
                 }
             ,'product.sale.buyer'])->find($request->id);
 
-            //return $purchase;
-
             $list_purchase = [];
             $obj = new \stdClass();
             foreach($purchase->product as $item){
@@ -612,6 +610,7 @@ class GetController extends Controller
                     }
                 }
             }
+
 
             $p_l = $this->calculateProfitLoss($purchase_obj,$list_sale,"purchase");
             $obj->purchase = $purchase_obj;
@@ -727,8 +726,10 @@ class GetController extends Controller
             }
 
             $total_purchase_value = $total_purchase_value+$purchase->transport+$purchase->labour+$purchase->other+$purchase->discount;
-            foreach ($sales->products as $sale){
-                $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
+            if(sizeof($sales)>0){
+                foreach ($sales as $sale){
+                    $total_sale_value = $total_sale_value+($sale->product->price * $sale->product->total_amount);
+                }
             }
         }
         else{
