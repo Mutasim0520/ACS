@@ -113,7 +113,7 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->get('/api/activate/user/{id}',['uses' => 'IndexController@activateUser']);
    $router->post('/api/reset/password',['uses' => 'IndexController@resetPassword']);
    $router->post('/api/update/user/role',['uses' => 'IndexController@updateUserRole']);
-   $router->post('/api/sales-return',['uses' => 'PostController@handelSalesReturn']);
+   $router->post('/api/returns',['uses' => 'PostController@handelReturn']);
 
 });
 

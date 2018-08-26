@@ -336,18 +336,30 @@ class PostController extends Controller
             $product = Products::with('color','size')->find($item->id);
             $color_formed_stock = $this->getColorWiseSizeQuantity($product->color,$product->size);
             $total = 0;
-            foreach ($item->colors as $color){
-                foreach ($color_formed_stock as $match_color){
-                    if($match_color->id == $color->id){
-                        foreach ($color->sizes as $size){
-                            foreach ($match_color->sizes as $match_size){
-                                if($match_size->id == $size->id){
-                                    $new = Sizes::where('id',$size->id)->first();
-                                    if($input->type == "product"){
-                                        $base_quantity = intval($match_size->quantity)-intval($size->quantity);
-                                    }else $base_quantity = intval($match_size->quantity);
-                                    $new->product()->updateExistingPivot($product->id,['color_id' => $color->id , 'quantity' => $base_quantity,'defected' => intval($match_size->defected)+intval($size->quantity)]);
-                                    $total = $total+intval($size->quantity);
+            foreach ($item->colors as $color) {
+                foreach ($color_formed_stock as $match_color) {
+                    if ($match_color->id == $color->id) {
+                        foreach ($color->sizes as $size) {
+                            foreach ($match_color->sizes as $match_size) {
+                                if ($match_size->id == $size->id) {
+                                    $new = Sizes::where('id', $size->id)->first();
+                                    if($match_size->defected){
+                                        $defected_initial_quantity = $match_size->defected;
+                                    }else{
+                                        $defected_initial_quantity = 0;
+                                    }
+                                    if ($input->return_type == "sale") {
+                                        if ($input->type == "product") $base_quantity = intval($match_size->quantity) - intval($size->quantity);
+                                        else $base_quantity = intval($match_size->quantity);
+                                        $new->product()->updateExistingPivot($product->id, ['color_id' => $color->id, 'quantity' => $base_quantity, 'defected' => intval($defected_initial_quantity) + intval($size->quantity)]);
+                                    }
+
+                                    else if ($input->return_type == "purchase") {
+                                        if ($input->type == "product") $base_quantity = intval($match_size->quantity);
+                                        else $base_quantity = intval($match_size->quantity) - intval($size->quantity);
+                                        $new->product()->updateExistingPivot($product->id, ['color_id' => $color->id, 'quantity' => $base_quantity]);
+                                    }
+                                    $total = $total + intval($size->quantity);
                                     break;
                                 }
                             }
@@ -356,11 +368,20 @@ class PostController extends Controller
                     }
                 }
             }
-            if($input->type == "cash"){
-                $product->stock = intval($product->stock)+$total;
+            if($input->return_type == "sale"){
+                if($input->type == "cash"){
+                    $product->stock = intval($product->stock)+$total;
+                }
+                $product->defected = intval($product->defected)+$total;
+                $product->save();
             }
-            $product->defected = intval($product->defected)+$total;
-            $product->save();
+            else{
+                if($input->type == "cash"){
+                    $product->stock = intval($product->stock) - $total;
+                    $product->initial_stock = intval($product->initial_stock) - $total;
+                    $product->save();
+                }
+            }
             $obj = new \stdClass();
             $obj->id = $product->id;
             $obj->quantity = $total;
@@ -828,36 +849,58 @@ class PostController extends Controller
     }
 
     protected function createReturnJournal($item,$user,$type,$quantity){
-        if($type == 'sale'){
-            $buyer = $item->buyer;
+        $journal = new Journals();
+        $journal->user_id = $user->id;
+        if($type == 'sale') {
+            $personnel = $item->buyer;
             $amount = intval($quantity)*intval($item->product[0]->pivot->price);
-            $narration = "Sales return from $buyer->company of $amount";
-
-            $journal = new Journals();
-            $journal->user_id = $user->id;
+            $narration = "Sales return from $personnel->company of $amount";
             $journal->sale_id = $item->id;
             $journal->account = 'sale-return';
+        }
+        else{
+            $personnel = $item->supplier;
+            $amount = intval($quantity)*intval($item->product[0]->purchase_unit_price);
+            $narration = "Purchase return from $personnel->company of $amount";
+            $journal->purchase_id = $item->id;
+            $journal->account = 'purchase-return';
+
+        }
             $journal->narration = $narration;
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
+        if($type == 'sale') {
             $this->setIntoJournal('Sale Return','Dr',$amount,$journal);
-            $this->setIntoJournal($buyer->company,'Cr',$amount,$journal);
+            $this->setIntoJournal($personnel->company,'Cr',$amount,$journal);
+        }
+        else{
+            $this->setIntoJournal('Cash','Cr',$amount,$journal);
+            $this->setIntoJournal($personnel->company,'Dr',$amount,$journal);
+        }
 
             $journal_2 = new Journals();
             $journal_2->user_id = $user->id;
-            $journal_2->purchase_id = $item->id;
+        if($type == 'sale') {
+            $journal_2->sale_id = $item->id;
             $journal_2->account = 'sale-return';
-            $narration_2 = "$buyer->company has been paid of BDT $amount";
-            $journal_2->narration = $narration_2;
-            $journal_2->save();
-            $journal_2 = Journals::orderBy('id','DESC')->first();
-            $this->setIntoJournal($buyer->company,'Dr',$amount,$journal_2);
+            $narration_2 = "$personnel->company has returned BDT $amount";
+        }else{
+            $journal_2->purchase_id = $item->id;
+            $journal_2->account = 'purchase-return';
+            $narration_2 = "$personnel->company has returned BDT $amount";
+        }
+        $journal_2->narration = $narration_2;
+        $journal_2->save();
+        $journal_2 = Journals::orderBy('id','DESC')->first();
+        if($type == 'sale') {
+            $this->setIntoJournal($personnel->company,'Dr',$amount,$journal_2);
             $this->setIntoJournal('Cash','Cr',$amount,$journal_2);
+        }else{
+            $this->setIntoJournal($personnel->company,'Cr',$amount,$journal_2);
+            $this->setIntoJournal('Cash','Dr',$amount,$journal_2);
+        }
 
-        }
-        else{
-        }
     }
 
     protected function setSalePriceOfProduct($products,$sale){
@@ -867,23 +910,38 @@ class PostController extends Controller
         }
     }
 
-    public function handelSalesReturn(Request $request){
+    public function handelReturn(Request $request){
         $input = json_decode($request->input);
         $user = User::where('api_token',$request->header('api-token'))->first();
-        if($input->type == "cash"){
-           $products = $this->tinkerDefectedProducts($input);
-           foreach ($products as $item){
-               $sale = Sales::with(["product" => function($query) use($item){
-                   return $query->where('id',$item->id);
-               } ,'buyer'])->find($input->sale_id);
-               return $sale;
-               $this->createReturnJournal($sale ,$user, 'sale',$product->quantity);
-               return response("success",200);
-           }
+        $products = $this->tinkerDefectedProducts($input);
+        //return $products;
+        if($input->return_type == 'sale'){
+            if($input->type == "cash"){
+                foreach ($products as $item){
+                    $sale = Sales::with(["product" => function($query) use($item){
+                        return $query->where('id',$item->id);
+                    } ,'buyer'])->find($input->id);
+                    $this->createReturnJournal($sale ,$user, 'sale',$item->quantity);
+                    return response("success",200);
+                }
+            }
+            else{
+                return response("success",200);
+            }
         }
         else{
-            $this->tinkerDefectedProducts($input);
-            return response("success",200);
+            if($input->type == "cash"){
+                foreach ($products as $item){
+                    $purchase = Purchases::with(["product" => function($query) use($item){
+                        return $query->where('id',$item->id);
+                    } ,'supplier'])->find($input->id);
+                    $this->createReturnJournal($purchase ,$user, 'purchase',$item->quantity);
+                    return response("success",200);
+                }
+            }
+            else{
+                return response("success",200);
+            }
         }
     }
 
