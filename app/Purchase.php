@@ -36,4 +36,8 @@ class Purchase extends Model implements AuthenticatableContract, AuthorizableCon
         return $this->hasMany('App\Accounts_purchase_historie');
     }
 
+    public function advance(){
+        return $this->hasOne('App\Advance');
+    }
+
 }

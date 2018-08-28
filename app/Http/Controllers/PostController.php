@@ -7,6 +7,7 @@ use App\User as User;
 use Faker\Provider\File;
 use Illuminate\Http\Request;
 use Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
@@ -28,6 +29,7 @@ use App\Sales_historie as Sale_history;
 use App\Accounts_sale_historie as Accounts_sale_history;
 use App\Accounts_purchase_historie as Accounts_purchase_history;
 use App\Product_image as image;
+use App\Advance as Advance;
 
 
 class PostController extends Controller
@@ -236,11 +238,17 @@ class PostController extends Controller
         return $total;
     }
 
-    public function setPurchase($input,$user){
-        $purchase = new Purchases();
-        $purchase->reference = $input->reference;
-        $purchase->supplier_id = $input->supplierId;
-        $purchase->warehouse_id = $user->id ;
+    public function setPurchase($input,$user,$status){
+        if($status == "new"){
+            $purchase = new Purchases();
+            $purchase->reference = trim(htmlspecialchars($input->reference));
+            $purchase->supplier_id = $input->supplierId;
+            $purchase->warehouse_id = $user->id ;
+        }
+        else {
+            $purchase = Purchases::find($input->id);
+            $purchase->status = 0;
+        }
         $purchase->save();
         $purchase = Purchases::orderBy('id','DESC')->first();
 
@@ -248,18 +256,22 @@ class PostController extends Controller
         $history->history = json_encode($input);
         $history->purchase_id = $purchase->id;
         $history->save();
-
         return $purchase->id;
     }
 
-    public function setSale($input,$user){
-        $sale = new Sales();
-        $sale->reference = $input->reference;
-        $sale->buyer_id = $input->buyerId;
-        $sale->warehouse_id = $user->id ;
+    public function setSale($input,$user,$status){
+        if($status == "new"){
+            $sale = new Sales();
+            $sale->reference = $input->reference;
+            $sale->buyer_id = $input->buyerId;
+            $sale->warehouse_id = $user->id ;
+        }
+        else{
+            $sale = Sales::find($input->id);
+        }
         $sale->status = "0";
         $sale->save();
-        $sale = Sales::orderBy('id','DESC')->first();
+        if($status == "new") $sale = Sales::orderBy('id','DESC')->first();
 
         $history = new Sale_history();
         $history->history = json_encode($input);
@@ -394,7 +406,7 @@ class PostController extends Controller
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->purchase);
-            $purchase = $this->setPurchase($input,$user);
+            $purchase = $this->setPurchase($input,$user,"new");
             $prd = $input->products;
             $supplier = Suppliers::where('id',$input->supplierId)->first();
             foreach ($prd as $item){
@@ -428,7 +440,7 @@ class PostController extends Controller
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->sale);
-            $id = $this->setSale($input,$user);
+            $id = $this->setSale($input,$user,"new");
             $sale = Sales::where('id',$id)->first();
             $prd = $input->products;
             foreach ($prd as $item){
@@ -875,8 +887,8 @@ class PostController extends Controller
             $this->setIntoJournal($personnel->company,'Cr',$amount,$journal);
         }
         else{
-            $this->setIntoJournal('Cash','Cr',$amount,$journal);
             $this->setIntoJournal($personnel->company,'Dr',$amount,$journal);
+            $this->setIntoJournal('Purchase Return','Cr',$amount,$journal);
         }
 
             $journal_2 = new Journals();
@@ -914,7 +926,6 @@ class PostController extends Controller
         $input = json_decode($request->input);
         $user = User::where('api_token',$request->header('api-token'))->first();
         $products = $this->tinkerDefectedProducts($input);
-        //return $products;
         if($input->return_type == 'sale'){
             if($input->type == "cash"){
                 foreach ($products as $item){
@@ -1056,6 +1067,173 @@ class PostController extends Controller
         catch (Exception $e){
             return response('error',500);
         }
+    }
+
+    public function createAdvance(Request $request){
+       try{
+           $input = json_decode($request->input);
+           $user = User::where('api_token',$request->header('api-token'))->first();
+           if($request->type == "purchase"){
+               $purchase = new Purchases();
+               $purchase->supplier_id = $input->personel;
+               $purchase->status = "advance";
+               $purchase->reference = trim(htmlspecialchars($input->reference));
+               $purchase->warehouse_id = $user->id ;
+               $purchase->save();
+               $account = Purchases::orderBy('id','DESC')->first();
+           }
+           else{
+               $sale = new Sales();
+               $sale->buyer_id = $input->personel;
+               $sale->status = "advance";
+               $sale->reference = trim(htmlspecialchars($input->reference));
+               $sale->warehouse_id = $user->id ;
+               $sale->save();
+               $account = Sales::orderBy('id','DESC')->first();
+           }
+
+           $advance = new Advance();
+           $advance->amount = $input->amount;
+           if($request->type == "purchase") $advance->purchase_id = $account->id;
+           else $advance->sale_id = $account->id;
+           $advance->date = date_create($request->date);
+           $advance->save();
+
+           $this->createAdvanceJournalEntry($account,$user,$input);
+
+           return response('success',200);
+       } catch (\Exception $e){
+           return response("error",500);
+       }
+    }
+
+    protected function createAdvanceJournalEntry($account,$user,$input){
+        $amount = $input->amount;
+        $journal = new Journals();
+        $journal->user_id = $user->id;
+        if($input->type == 'sale') {
+            $personnel = Buyers::find($input->personnel);
+            $narration = "Advance has been received for sales $personnel->company of $amount";
+            $journal->sale_id = $account->id;
+            $journal->account = 'advance-sale';
+        }
+        else{
+            $personnel = Suppliers::find($input->personnel);
+            $narration = "Advance has been given for purchase to $personnel->company of $amount";
+            $journal->purchase_id = $account->id;
+            $journal->account = 'advance-sale';
+
+        }
+        $journal->narration = $narration;
+        $journal->save();
+        $journal = Journals::orderBy('id','DESC')->first();
+
+        if($input->type == 'sale') {
+            $this->setIntoJournal($personnel->company,'Dr',$amount,$journal);
+            $this->setIntoJournal('Advance Sale','Cr',$amount,$journal);
+        }
+        else{
+            $this->setIntoJournal('Advance Purchase','Dr',$amount,$journal);
+            $this->setIntoJournal($personnel->company,'Cr',$amount,$journal);
+        }
+
+        $journal_2 = new Journals();
+        $journal_2->user_id = $user->id;
+        if($input->type == 'sale') {
+            $journal_2->sale_id = $account->id;
+            $journal_2->account = 'advance-sale';
+            $narration_2 = "$personnel->company has given BDT $amount as advance for sale";
+        }
+        else{
+            $journal_2->purchase_id = $account->id;
+            $journal_2->account = 'advance-purchase';
+            $narration_2 = "$personnel->company has been given BDT $amount as advance for purchase";
+        }
+        $journal_2->narration = $narration_2;
+        $journal_2->save();
+        $journal_2 = Journals::orderBy('id','DESC')->first();
+        if($input->type == 'sale') {
+            $this->setIntoJournal('Cash','Dr',$amount,$journal_2);
+            $this->setIntoJournal($personnel->company,'Cr',$amount,$journal_2);
+        }else{
+            $this->setIntoJournal($personnel->company,'Dr',$amount,$journal_2);
+            $this->setIntoJournal('Cash','Cr',$amount,$journal_2);
+        }
+
+    }
+
+    public function createPurchaseFromAdvanceWarehouse(Request $request){
+        $user = User::where('api_token',$request->header('api-token'))->first();
+        try{
+            $input = json_decode($request->purchase);
+            $purchase = $this->setPurchase($input,$user,"old");
+            $prd = $input->products;
+            $supplier = Suppliers::where('id',$input->supplierId)->first();
+            foreach ($prd as $item){
+                $category = Category::where('id',$item->category)->first();
+                $sub_category = SubCategory::where('id',$item->sub_category)->first();
+                $meta = $category->name.'_'.$sub_category->name.'_'.$item->name.'_'.$supplier->name.'_'.$input->reference;
+                $product = new Products();
+                $product->name = $item->name;
+                $product->meta = $meta;
+                $product->categorie_id = $item->category;
+                $product->sub_categorie_id = $item->sub_category;
+                $product->purchase_id = $purchase;
+                $stock = $this->countTotal($item->colors);
+                $product->stock = $stock;
+                $product->initial_stock = $stock;
+                $product->save();
+                $product = Products::orderBy('id','DESC')->first();
+                $this->setAmounts($product,$item->colors);
+            }
+
+            $advance = Advance::where('purchase_id',$purchase)->fisrt();
+            $advance->status == "processed";
+            $advance->save();
+            $response = [
+                'message' => 'created'
+            ];
+            return response(json_encode($response,201));
+        }catch (Exception $e){
+            return response("Internal Server Error",500);
+        }
+
+    }
+
+    public function createSaleFromAdvanceWarehouse(Request $request){
+        $user = User::where('api_token',$request->header('api-token'))->first();
+        try{
+            $input = json_decode($request->sale);
+            $id = $this->setSale($input,$user,"old");
+            $sale = Sales::where('id',$id)->first();
+            $prd = $input->products;
+            foreach ($prd as $item){
+                $product = Products::where('id',$item->id)->first();
+                $amount_to_reduce = $this->updateProductStock($product,$item->colors);
+                $product->sale()->save($sale,['total_amount' => $amount_to_reduce]);
+
+            }
+            $advance = Advance::where('sale_id',$id)->fisrt();
+            $advance->status == "processed";
+            $advance->save();
+
+            $response = [
+                'message' => 'created'
+            ];
+            return response(json_encode($response,201));
+        }catch (Exception $e){
+            return response("Internal Server Error",500);
+        }
+
+    }
+
+    public function deleteAdvance(Request $request){
+        $advance  = Advance::find($request->id);
+        if($advance->purchase_id) $entry = Purchases::find($advance->purchase_id);
+        else $entry = Sales::find($advance->sale_id);
+        $entry->delete();
+        $entry->delete();
+        return response("success",200);
     }
 
 }

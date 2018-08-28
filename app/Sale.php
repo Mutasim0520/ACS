@@ -36,5 +36,9 @@ class Sale extends Model implements AuthenticatableContract, AuthorizableContrac
         return $this->hasMany('App\Accounts_sale_historie');
     }
 
+    public function advance(){
+        return $this->hasOne('App\Advance');
+    }
+
 
 }

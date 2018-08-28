@@ -173,5 +173,6 @@ class IndexController extends Controller
             return response("error",500);
         }
     }
+
 }
 
