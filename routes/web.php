@@ -113,7 +113,6 @@ $router->group(['middleware' => 'auth'],function () use ($router){
     $router->post('/api/{role}/update/price/purchase',['uses' => 'UpdateController@updatePricePurchase']);
     $router->post('/api/{role}/update/price/sale',['uses' => 'UpdateController@updatePriceSale']);
     $router->post('/api/update/sale',['uses' => 'UpdateController@updateSale']);
-    $router->post('/api/{role}/purchase/price/update',['uses' => 'UpdateController@updatePurchasedProductPrice']);
 
 
     //Product descrption related
@@ -130,8 +129,8 @@ $router->group(['middleware' => 'auth'],function () use ($router){
     $router->get('/api/indivisual/admin',['uses' => 'GetController@getIndivisualAdmin']);
 
    //user account management
-   $router->get('/api/inactivate/user/{id}',['uses' => 'IndexController@inactivateUser']);
-   $router->get('/api/activate/user/{id}',['uses' => 'IndexController@activateUser']);
+   $router->get('/api/inactivate/user',['uses' => 'IndexController@inactivateUser']);
+   $router->get('/api/activate/user',['uses' => 'IndexController@activateUser']);
    $router->post('/api/reset/password',['uses' => 'IndexController@resetPassword']);
    $router->post('/api/update/user/role',['uses' => 'IndexController@updateUserRole']);
 
@@ -143,7 +142,7 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->post('/api/warehouse/purchase-from-advance',['uses' => 'PostController@createPurchaseFromAdvanceWarehouse']);
    $router->post('/api/warehouse/sale-from-advance',['uses' => 'PostController@createSaleFromAdvanceWarehouse']);
    $router->get('/api/advance/get',['uses' => 'GetController@getAdvance']);
-   $router->post('/api/advance/delete',['uses' => 'PostController@deleteAdvance']);
+   $router->delete('/api/advance/delete',['uses' => 'PostController@deleteAdvance']);
 
 });
 

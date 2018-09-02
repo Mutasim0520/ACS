@@ -627,7 +627,7 @@ class GetController extends Controller
                     return $query->orderBy('created_at','DESC')->first();
                 }
                 ,'product.purchase.supplier'])->find($request->id);
-
+            if($sale->status != 'complete') return response('incomplete sale');
             $sales_obj = new \stdClass();
             $sales_obj->id = $sale->id;
             $sales_obj->reference = $sale->reference;
@@ -647,12 +647,14 @@ class GetController extends Controller
             $sales_obj->products = $sold_products;
             //return json_encode($sales_obj);
             foreach ($sale->product as $item){
+                $product = Products::with('color','size')->find($item->id);
+                $sorted_stock = $this->getColorWiseSizeQuantity($product->color,$product->size);
                 $purchase_obj = new \stdClass();
-                $purchase_obj->product_id = $item->id;
                 $purchase_obj->product_name = $item->name;
                 $purchase_obj->unit_price = $item->purchase_unit_price;
                 $purchase_obj->initial_stock = $item->initial_stock;
                 $purchase_obj->stock = $item->stock;
+                $purchase_obj->detail_stock = $sorted_stock;
                 $purchase_obj->id = $item->purchase->id;
                 $purchase_obj->created_at = $item->purchase->created_at;
                 $purchase_obj->reference = $item->purchase->reference;
@@ -670,7 +672,7 @@ class GetController extends Controller
             $p_l = $this->calculateProfitLoss($list_purchases,$sales_obj,"sale");
             $obj = new \stdClass();
             $obj->purchase = $list_purchases;
-            $obj->sales = $purchase_obj;
+            $obj->sales = $sales_obj;
             $obj->pl = json_decode($p_l);
 
             return response(json_encode($obj),201);
@@ -682,14 +684,16 @@ class GetController extends Controller
 
     public function getSupplierWiseReport(Request $request){
         $report = Suppliers::with(['purchase' => function($query){
-            return $query->orderBy('id','DESC');
+            return $query->where('status','complete')
+                ->orderBy('id','DESC');
         },'purchase.product'])->where('id',$request->id)->first();
         return response(($report),201);
     }
 
     public function getBuyerWiseReport(Request $request){
         $report = Buyers::with(['sale' => function($query){
-            return $query->orderBy('id','DESC');
+            return $query->where('status','complete')->
+            orderBy('id','DESC');
         },'sale.product'])->where('id',$request->id)->first();
         return response(($report),201);
     }
@@ -1084,10 +1088,10 @@ class GetController extends Controller
 
     }
 
-    public function getAdmins(){
+    public function getAdmins(Request $request){
         try{
-
-            $admins = Admins::orderBy('name','ASC')->where('id','!=',Auth::id())->get();
+            $user = Admins::where('api_token',$request->header('api-token'))->first();
+            $admins = Admins::orderBy('name','ASC')->where('id','!=',$user->id)->get();
             return response(json_encode($admins),201);
         }catch (Exception $e){
             return response('error',500);

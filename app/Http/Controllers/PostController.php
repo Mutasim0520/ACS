@@ -666,7 +666,7 @@ class PostController extends Controller
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->purchase);
-            $purchase = Purchases::find($input->purchaseId);
+            $purchase = Purchases::with('advance')->find($input->purchaseId);
             if($purchase->status == 'complete'){
                 $response = [
                     'message' => 'already completed'
@@ -694,13 +694,16 @@ class PostController extends Controller
                         else if($item->payment_category ==  3){
                             $payment = $item->partial;
                             if($item->payment_type == 1){
-                                $due = $due+($item->total-$payment->cash);
+                                if($purchase->advance) $due = $due+($item->total-$payment->cash-intval($purchase->advance->amount));
+                                else $due = $due+($item->total-$payment->cash-intval);
                             }
                             else if($item->payment_type == 2){
-                                $due = $due+($item->total-$payment->check);
+                                if($purchase->advance) $due = $due+($item->total-$payment->check-intval($purchase->advance->amount));
+                                else $due = $due+($item->total-$payment->check);
                             }
                             else if($item->payment_type == 3){
-                                $due = $due+($item->total-$payment->check-$payment->cash);
+                                if($purchase->advance) $due = $due+($item->total-$payment->check-$payment->cash-intval($purchase->advance->amount));
+                                else $due = $due+($item->total-$payment->check-$payment->cash);
                             }
                         }
                     }
@@ -790,7 +793,7 @@ class PostController extends Controller
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->sale);
-            $sale = Sales::find($input->saleId);
+            $sale = Sales::with('advance')->find($input->saleId);
             if($sale->status == 'complete'){
                 $response = [
                     'message' => 'already completed'
@@ -813,13 +816,16 @@ class PostController extends Controller
                         else if($item->payment_category ==  3){
                             $payment = $item->partial;
                             if($item->payment_type == 1){
-                                $due = $due+($item->total-$payment->cash);
+                                if($sale->advance) $due = $due+($item->total-$payment->cash-intval($sale->advance->amount));
+                                else $due = $due+($item->total-$payment->cash);
                             }
                             else if($item->payment_type == 2){
-                                $due = $due+($item->total-$payment->check);
+                                if($sale->advance) $due = $due+($item->total-$payment->check-intval($sale->advance->amount));
+                                else $due = $due+($item->total-$payment->check);
                             }
                             else if($item->payment_type == 3){
-                                $due = $due+($item->total-$payment->check-$payment->cash);
+                                if($sale->advance) $due = $due+($item->total-$payment->check-$payment->cash-intval($sale->advance->amount));
+                                else $due = $due+($item->total-$payment->check-$payment->cash);
                             }
                         }
                     }
@@ -1070,41 +1076,44 @@ class PostController extends Controller
     }
 
     public function createAdvance(Request $request){
-       try{
+
            $input = json_decode($request->input);
            $user = User::where('api_token',$request->header('api-token'))->first();
-           if($request->type == "purchase"){
-               $purchase = new Purchases();
-               $purchase->supplier_id = $input->personel;
-               $purchase->status = "advance";
-               $purchase->reference = trim(htmlspecialchars($input->reference));
-               $purchase->warehouse_id = $user->id ;
-               $purchase->save();
-               $account = Purchases::orderBy('id','DESC')->first();
+           try{
+               if($input->type == "purchase"){
+                   $purchase = new Purchases();
+                   $purchase->supplier_id = $input->personnel;
+                   $purchase->status = "advance";
+                   $purchase->reference = trim(htmlspecialchars($input->reference));
+                   $purchase->warehouse_id = $user->id ;
+                   $purchase->save();
+                   $account = Purchases::orderBy('id','DESC')->first();
+               }
+               else{
+                   $sale = new Sales();
+                   $sale->buyer_id = $input->personel;
+                   $sale->status = "advance";
+                   $sale->reference = trim(htmlspecialchars($input->reference));
+                   $sale->warehouse_id = $user->id ;
+                   $sale->save();
+                   $account = Sales::orderBy('id','DESC')->first();
+               }
+
+               $advance = new Advance();
+               $advance->amount = $input->amount;
+               if($input->type == "purchase") $advance->purchase_id = $account->id;
+               else $advance->sale_id = $account->id;
+               $advance->date = date_create($input->date);
+               $advance->save();
+
+               $this->createAdvanceJournalEntry($account,$user,$input);
+
+               return response('success',200);
            }
-           else{
-               $sale = new Sales();
-               $sale->buyer_id = $input->personel;
-               $sale->status = "advance";
-               $sale->reference = trim(htmlspecialchars($input->reference));
-               $sale->warehouse_id = $user->id ;
-               $sale->save();
-               $account = Sales::orderBy('id','DESC')->first();
+           catch (\Exception $e){
+               return response("error",500);
            }
 
-           $advance = new Advance();
-           $advance->amount = $input->amount;
-           if($request->type == "purchase") $advance->purchase_id = $account->id;
-           else $advance->sale_id = $account->id;
-           $advance->date = date_create($request->date);
-           $advance->save();
-
-           $this->createAdvanceJournalEntry($account,$user,$input);
-
-           return response('success',200);
-       } catch (\Exception $e){
-           return response("error",500);
-       }
     }
 
     protected function createAdvanceJournalEntry($account,$user,$input){
@@ -1187,7 +1196,7 @@ class PostController extends Controller
                 $this->setAmounts($product,$item->colors);
             }
 
-            $advance = Advance::where('purchase_id',$purchase)->fisrt();
+            $advance = Advance::where('purchase_id',$purchase)->first();
             $advance->status == "processed";
             $advance->save();
             $response = [
@@ -1213,7 +1222,7 @@ class PostController extends Controller
                 $product->sale()->save($sale,['total_amount' => $amount_to_reduce]);
 
             }
-            $advance = Advance::where('sale_id',$id)->fisrt();
+            $advance = Advance::where('sale_id',$id)->first();
             $advance->status == "processed";
             $advance->save();
 
