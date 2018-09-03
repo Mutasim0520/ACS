@@ -25,6 +25,7 @@ $router->post('/api/login',[
     $router->get('/api/colors',['uses' => 'GetController@getColors']);
     $router->get('/api/sizes',['uses' => 'GetController@getSizes']);
     $router->get('/api/buyers',['uses' => 'GetController@getBuyers']);
+
     //purchases
     $router->get('/api/all/purchases',['uses' => 'GetController@getAllPurchases']);
     $router->get('/api/incomplete/purchases',['uses' => 'GetController@getIncompletePurchases']);
@@ -144,5 +145,6 @@ $router->group(['middleware' => 'auth'],function () use ($router){
    $router->get('/api/advance/get',['uses' => 'GetController@getAdvance']);
    $router->delete('/api/advance/delete',['uses' => 'PostController@deleteAdvance']);
 
+   $router->get('/api/user',['uses' => 'GetController@getUser']);
 });
 

@@ -1091,7 +1091,7 @@ class PostController extends Controller
                }
                else{
                    $sale = new Sales();
-                   $sale->buyer_id = $input->personel;
+                   $sale->buyer_id = $input->personnel;
                    $sale->status = "advance";
                    $sale->reference = trim(htmlspecialchars($input->reference));
                    $sale->warehouse_id = $user->id ;

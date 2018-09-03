@@ -179,7 +179,7 @@ class GetController extends Controller
     }
 
     public function getAllPurchases(){
-        $purchases = Purchases::with('supplier','product','purchase_historie','advance')->orderBy('id','DESC')->get();
+        $purchases = Purchases::with('supplier','product','purchase_historie','advance')->where('status','!=','advance')->orderBy('id','DESC')->get();
         return response(json_encode($purchases),200);
     }
 
@@ -215,7 +215,7 @@ class GetController extends Controller
     }
 
     public function getAllSales(){
-        $sales = Sales::with('buyer','sales_historie','product','advance')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status','!=','advance')->orderBy('id','DESC')->get();
         return response(json_encode($sales),200);
     }
 
@@ -1137,6 +1137,11 @@ class GetController extends Controller
     public function getAdvance(Request $request){
         $advances = Advance::with('purchase','purchase.supplier','sale','sale.buyer')->where('status','unprocessed')->get();
         return response(json_encode($advances),200);
+    }
+
+    public function getUser(Request $request){
+        $user = User::where('api_token',$request->header('api-token'))->first();
+        return response($user,200);
     }
 
 }
