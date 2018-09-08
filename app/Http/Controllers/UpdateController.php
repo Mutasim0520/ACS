@@ -45,6 +45,7 @@ class UpdateController extends Controller
         $purchase = Purchases::where('id',$input->purchase_id)->first();
         $purchase->reference = $input->reference;
         $purchase->supplier_id = $input->supplierId;
+        $purchase->date = Carbon::parse($input->date);
         $purchase->save();
         $history = new History();
         $history->history = json_encode($input);
@@ -56,6 +57,7 @@ class UpdateController extends Controller
         $sale = Sales::where('id',$input->sale_id)->first();
         $sale->reference = $input->reference;
         $sale->buyer_id = $input->buyerId;
+        $sale->date = Carbon::parse($input->date);
         $sale->save();
 
         $history = new Sale_History();

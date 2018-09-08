@@ -179,76 +179,76 @@ class GetController extends Controller
     }
 
     public function getAllPurchases(){
-        $purchases = Purchases::with('supplier','product','purchase_historie','advance')->where('status','!=','advance')->orderBy('id','DESC')->get();
+        $purchases = Purchases::with('supplier','product','purchase_historie','advance')->orderBy('date','DESC')->where('status','!=','advance')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getIncompletePurchases(){
-        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie','advance')->orderBy('id','DESC')->where('status','0')->get();
+        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie','advance')->orderBy('date','DESC')->where('status','0')->get();
         return response(($purchases),200);
     }
 
     public function getExtendedPurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->orderBy('id','DESC')->where('status','extended')->get();
+        },'advance'])->orderBy('date','DESC')->where('status','extended')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getDuePurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->orderBy('id','DESC')->where('payment_status','due')->get();
+        },'advance'])->orderBy('date','DESC')->where('payment_status','due')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getFullPaidPurchase(){
         $purchases = Purchases::with(['supplier','product','product.categorie','product.sub_categorie','accounts_purchase_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->orderBy('id','DESC')->where('payment_status','paid')->get();
+        },'advance'])->orderBy('date','DESC')->where('payment_status','paid')->get();
         return response(json_encode($purchases),200);
     }
 
     public function getCompletePurchases(){
-        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie','advance')->orderBy('id','DESC')->where('status','complete')->get();
+        $purchases = Purchases::with('supplier','product','product.categorie','product.sub_categorie','advance')->orderBy('date','DESC')->where('status','complete')->get();
         return response(($purchases),200);
     }
 
     public function getAllSales(){
-        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status','!=','advance')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status','!=','advance')->orderBy('date','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getIncompleteSales()
     {
-        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status', '0')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status', '0')->orderBy('date','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
     public function getCompleteSales()
     {
-        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status', 'complete')->orderBy('id','DESC')->get();
+        $sales = Sales::with('buyer','sales_historie','product','advance')->where('status', 'complete')->orderBy('date','DESC')->get();
         return response(json_encode($sales), 200);
     }
 
     public function getDueSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->where('payment_status','due')->orderBy('id','DESC')->get();
+        },'advance'])->where('payment_status','due')->orderBy('date','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getFullPaidSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->where('payment_status','paid')->orderBy('id','DESC')->get();
+        },'advance'])->where('payment_status','paid')->orderBy('date','DESC')->get();
         return response(json_encode($sales),200);
     }
 
     public function getExtendedSale(){
         $sales = Sales::with(['buyer','product','product.categorie','product.sub_categorie','accounts_sale_historie' => function($query){
             return $query->orderBy('id','DESC');
-        },'advance'])->where('status','extended')->orderBy('id','DESC')->get();
+        },'advance'])->where('status','extended')->orderBy('date','DESC')->get();
         return response(json_encode($sales),200);
     }
 
@@ -519,6 +519,7 @@ class GetController extends Controller
                     $obj->name = $size->name;
                     $quantity = $size->pivot;
                     $obj->quantity = $quantity->quantity;
+                    $obj->defected = $quantity->defected;
                     $list[] = $obj;
                     $counter++;
                 }
@@ -1134,13 +1135,13 @@ class GetController extends Controller
         }
     }
 
-    public function getAdvance(Request $request){
-        $advances = Advance::with('purchase','purchase.supplier','sale','sale.buyer')->where('status','unprocessed')->get();
+    public function getAdvance(){
+        $advances = Advance::with('purchase','purchase.supplier','sale','sale.buyer')->where('status','unprocessed')->orderBy('date','ASC')->get();
         return response(json_encode($advances),200);
     }
 
     public function getUser(Request $request){
-        $user = User::where('api_token',$request->header('api-token'))->first();
+        $user = Admins::where('api_token',$request->header('api-token'))->first();
         return response($user,200);
     }
 

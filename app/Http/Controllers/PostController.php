@@ -244,10 +244,12 @@ class PostController extends Controller
             $purchase->reference = trim(htmlspecialchars($input->reference));
             $purchase->supplier_id = $input->supplierId;
             $purchase->warehouse_id = $user->id ;
+            $purchase->date = Carbon::parse($input->date);
         }
         else {
             $purchase = Purchases::find($input->id);
             $purchase->status = 0;
+            $purchase->date = Carbon::parse($input->date);
         }
         $purchase->save();
         $purchase = Purchases::orderBy('id','DESC')->first();
@@ -265,11 +267,13 @@ class PostController extends Controller
             $sale->reference = $input->reference;
             $sale->buyer_id = $input->buyerId;
             $sale->warehouse_id = $user->id ;
+            $sale->date = Carbon::parse($input->date);
         }
         else{
             $sale = Sales::find($input->id);
+            $sale->status = 0;
+            $sale->date = Carbon::parse($input->date);
         }
-        $sale->status = "0";
         $sale->save();
         if($status == "new") $sale = Sales::orderBy('id','DESC')->first();
 
@@ -1197,7 +1201,7 @@ class PostController extends Controller
             }
 
             $advance = Advance::where('purchase_id',$purchase)->first();
-            $advance->status == "processed";
+            $advance->status = "processed";
             $advance->save();
             $response = [
                 'message' => 'created'
@@ -1223,7 +1227,7 @@ class PostController extends Controller
 
             }
             $advance = Advance::where('sale_id',$id)->first();
-            $advance->status == "processed";
+            $advance->status = "processed";
             $advance->save();
 
             $response = [
