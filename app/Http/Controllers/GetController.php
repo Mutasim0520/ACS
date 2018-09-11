@@ -255,7 +255,7 @@ class GetController extends Controller
     public function getJournal(Request $request){
        $from = date('Y-m-d H:i:s', strtotime($request->date));
        $to = date('Y-m-d H:i:s', strtotime($from . ' +1 day'));
-       $journals = Journals::with('ledger')->whereBetween('created_at',[$from,$to])->orderBy('id','DESC')->get();
+       $journals = Journals::with('ledger')->whereBetween('date',[$from,$to])->orderBy('id','DESC')->get();
        return response($journals,200);
     }
 
@@ -300,14 +300,14 @@ class GetController extends Controller
         $from = Carbon::parse($from_date);
         $obj = new \stdClass();
         $ledgers = Ledgers::with(['journal' => function($query) use($from,$to){
-            return $query->whereBetween('created_at',[$from,$to]);
+            return $query->whereBetween('date',[$from,$to]);
         }])->where('id',$id)->get();
 
         $beginning = date('Y-m-d H:i:s',strtotime('2018-1-1'));
 
         $opening_balance_ledger = Ledgers::with(['journal' => function($query) use($beginning,$targeted_day){
             $from = date('Y-m-d H:i:s', strtotime($beginning));
-            $query->whereBetween('created_at',[$from,$targeted_day]);
+            $query->whereBetween('date',[$from,$targeted_day]);
         }])->where('id',$id)->get();
 
         $opening_balance = new \stdClass();
