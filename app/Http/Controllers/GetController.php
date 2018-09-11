@@ -418,25 +418,25 @@ class GetController extends Controller
         if($time == 'today'){
             $from = Carbon::today();
             $to = Carbon::tomorrow();
-            $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
+            $purchases = Purchases::with('supplier','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         else if($time == 'yesterday'){
             $from = Carbon::yesterday();
             $to = Carbon::today();
-            $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
+            $purchases = Purchases::with('supplier','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         elseif ($time == 'week'){
             $from = Carbon::now()->startOfWeek();
             $to = Carbon::now()->endOfWeek();
-            $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
+            $purchases = Purchases::with('supplier','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($purchases),201);
         }
         elseif ($time == 'month'){
             $from = Carbon::now()->startOfMonth();
             $to = Carbon::now()->endOfMonth();
-            $purchases = Purchases::with('supplier','product')->whereBetween('created_at',[$from,$to])->get();
+            $purchases = Purchases::with('supplier','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($purchases),201);
 
         }
@@ -448,25 +448,25 @@ class GetController extends Controller
         if($time == 'today'){
             $from = Carbon::today();
             $to = Carbon::tomorrow();
-            $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
+            $sales = Sales::with('buyer','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($sales),201);
         }
         else if($time == 'yesterday'){
             $from = Carbon::yesterday();
             $to = Carbon::today();
-            $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
+            $sales = Sales::with('buyer','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($sales),201);
         }
         elseif ($time == 'week'){
             $from = Carbon::now()->startOfWeek();
             $to = Carbon::now()->endOfWeek();
-            $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
+            $sales = Sales::with('buyer','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($sales),201);
         }
         elseif ($time == 'month'){
             $from = Carbon::now()->startOfMonth();
             $to = Carbon::now()->endOfMonth();
-            $sales = Sales::with('buyer','product')->whereBetween('created_at',[$from,$to])->get();
+            $sales = Sales::with('buyer','product')->whereBetween('date',[$from,$to])->get();
             return response(json_encode($sales),201);
 
         }

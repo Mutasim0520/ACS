@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Journal;
 use App\Ledger_categorie;
 use App\User as User;
+use Carbon\Carbon;
 use DeepCopy\f008\B;
 use Illuminate\Http\Request;
 use Auth;
@@ -281,41 +282,41 @@ class UpdateController extends Controller
                 $this->createNewLedger($purchase->supplier);
                 $total = 0;
                 foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase);
+                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase,"old");
                     $total = floatval($item->total)+$total;
                 }
                 $supplier = $purchase->supplier;
 
                 if($purchase->transport){
                     $narration = "Transport cost of BDT ".$purchase->transport;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->transport,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->transport,$journal);
 
                     $narration = "Transport cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal('Transport','Dr',$purchase->transport,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
                 }
                 if($purchase->labour){
                     $narration = "Labour cost of BDT ".$purchase->labour;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->labour,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->labour,$journal);
 
                     $narration = "Labour cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal('Labour','Dr',$purchase->labour,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
                 }
                 if($purchase->other){
                     $narration = "Others cost of BDT ".$purchase->other;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->other,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->other,$journal);
 
                     $narration = "Others cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
                     $this->setIntoJournal('Other','Dr',$purchase->other,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
                 }
@@ -369,52 +370,52 @@ class UpdateController extends Controller
                 $this->createNewLedger($sale->buyer);
                 $total = 0;
                 foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'sale' , $sale);
+                    $this->setPSIntoJournal($item , $user , 'sale' , $sale,"old");
                     $total = floatval($item->total)+$total;
                 }
                 $supplier = $sale->buyer;
 
-                if($sale->transport){
-                    $narration = "Transport cost of BDT ".$sale->transport;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
-                    $this->setIntoJournal('Cash','Cr',$sale->transport,$journal);
-                    $narration = "Transport cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-                }
-                if($sale->labour){
-                    $narration = "Labour cost of BDT ".$sale->labour;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
-                    $this->setIntoJournal('Cash','Cr',$sale->labour,$journal);
-                    $narration = "Labour cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-                }
-                if($sale->other){
-                    $narration = "Others cost of BDT ".$sale->other;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
-                    $this->setIntoJournal('Cash','Cr',$sale->other,$journal);
-                    $narration = "Others cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-                }
-                if($sale->vat){
-                    $vat = floor($total*13/100);
-                    $narration = "Vat of BDT ".$vat;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-                    $this->setIntoJournal('Cash','Cr',$vat,$journal);
-                    $narration = "Vat of BDT ".$sale->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-                }
+//                if($sale->transport){
+//                    $narration = "Transport cost of BDT ".$sale->transport;
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
+//                    $this->setIntoJournal('Cash','Cr',$sale->transport,$journal);
+//                    $narration = "Transport cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
+//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
+//                }
+//                if($sale->labour){
+//                    $narration = "Labour cost of BDT ".$sale->labour;
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
+//                    $this->setIntoJournal('Cash','Cr',$sale->labour,$journal);
+//                    $narration = "Labour cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
+//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
+//                }
+//                if($sale->other){
+//                    $narration = "Others cost of BDT ".$sale->other;
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
+//                    $this->setIntoJournal('Cash','Cr',$sale->other,$journal);
+//                    $narration = "Others cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
+//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
+//                }
+//                if($sale->vat){
+//                    $vat = floor($total*13/100);
+//                    $narration = "Vat of BDT ".$vat;
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
+//                    $this->setIntoJournal('Cash','Cr',$vat,$journal);
+//                    $narration = "Vat of BDT ".$sale->transport." for purchasing product from $supplier->company";
+//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
+//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
+//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
+//                }
                 $this->setPurchasePriceOfProduct($input->products,$sale);
 
                 $response = [
@@ -501,12 +502,12 @@ class UpdateController extends Controller
                             }
                         }
                         $narration = "Transport cost of BDT ".$purchase->transport;
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport',$purchase->date);
                         $this->setIntoJournal($supplier->company,'Dr',$purchase->transport,$journal);
                         $this->setIntoJournal('Cash',$supplier->company,'Cr',$purchase->transport,$journal);
 
                         $narration = "Transport cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport',$purchase->date);
                         $this->setIntoJournal('Transport','Dr',$purchase->transport,$journal);
                         $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
                     }
@@ -519,12 +520,12 @@ class UpdateController extends Controller
                             }
                         }
                         $narration = "Labour cost of BDT ".$purchase->labour;
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour',$purchase->date);
                         $this->setIntoJournal($supplier->company,'Dr',$purchase->labour,$journal);
                         $this->setIntoJournal('Cash','Cr',$purchase->labour,$journal);
 
                         $narration = "Labour cost of BDT ".$purchase->labour." for purchasing product from $supplier->company";
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour',$purchase->date);
                         $this->setIntoJournal('Labour','Dr',$purchase->labour,$journal);
                         $this->setIntoJournal($supplier->company,'Cr',$purchase->labour,$journal);
                     }
@@ -537,12 +538,12 @@ class UpdateController extends Controller
                             }
                         }
                         $narration = "Others cost of BDT ".$purchase->other;
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others',$purchase->date);
                         $this->setIntoJournal($supplier->company,'Dr',$purchase->other,$journal);
                         $this->setIntoJournal('Cash','Cr',$purchase->other,$journal);
 
                         $narration = "Others cost of BDT ".$purchase->other." for purchasing product from $supplier->company";
-                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others');
+                        $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others',$purchase->date);
                         $this->setIntoJournal('Other','Dr',$purchase->other,$journal);
                         $this->setIntoJournal($supplier->company,'Cr',$purchase->other,$journal);
                     }
@@ -683,7 +684,7 @@ class UpdateController extends Controller
                 $purchase = Purchases::with('supplier','product')->where('id',$input->purchaseId)->first();
 
                 foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase);
+                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase,"new");
                 }
                 $response = [
                     'message' => 'created'
@@ -737,7 +738,7 @@ class UpdateController extends Controller
                 $sale = Sales::with('buyer','product')->where('id',$input->saleId)->first();
 
                 foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'sale' , $sale);
+                    $this->setPSIntoJournal($item , $user , 'sale' , $sale,"new");
                 }
                 $response = [
                     'message' => 'created'
@@ -791,7 +792,7 @@ class UpdateController extends Controller
         $journal->ledger()->save($ledger,['account_type' => $type,'value' => $value]);
     }
 
-    public function setPSIntoJournal($item,$user,$action_type,$action){
+    public function setPSIntoJournal($item,$user,$action_type,$action,$journal_date_status){
         $category = $item->payment_category;
         $type = $item->payment_type;
         $discount = $action->discount;
@@ -804,6 +805,8 @@ class UpdateController extends Controller
             $journal->user_id = $user->id;
             $journal->purchase_id = $action->id;
             $journal->account = 'purchase';
+            if($journal_date_status == "new") $journal->date = Carbon::today();
+            else $journal->date = $action->date;
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
@@ -819,6 +822,8 @@ class UpdateController extends Controller
             $journal_2->user_id = $user->id;
             $journal_2->purchase_id = $action->id;
             $journal_2->account = 'purchase';
+            if($journal_date_status == "new") $journal_2->date = Carbon::today();
+            else $journal_2->date = $action->date;
             $journal_2->save();
             $journal_2 = Journals::orderBy('id','DESC')->first();
 
@@ -982,12 +987,13 @@ class UpdateController extends Controller
         }
     }
 
-    protected function createJournalEntry($narration,$user_id,$purchase_id,$account){
+    protected function createJournalEntry($narration,$user_id,$purchase_id,$account,$date){
         $journal = new Journals();
         $journal->user_id = $user_id;
         $journal->purchase_id = $purchase_id;
         $journal->narration = $narration;
         $journal->account = $account;
+        $journal->date = $date;
         $journal->save();
         $journal = Journals::orderBy('id','DESC')->first();
         return $journal;

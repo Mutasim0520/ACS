@@ -512,6 +512,7 @@ class PostController extends Controller
             $journal->user_id = $user->id;
             $journal->purchase_id = $action->id;
             $journal->account = 'purchase';
+            $journal->date = $action->date;
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
@@ -527,6 +528,7 @@ class PostController extends Controller
             $journal_2->user_id = $user->id;
             $journal_2->purchase_id = $action->id;
             $journal_2->account = 'purchase';
+            $journal_2->date = $action->date;
             $journal_2->save();
             $journal_2 = Journals::orderBy('id','DESC')->first();
 
@@ -593,6 +595,7 @@ class PostController extends Controller
             $journal->user_id = $user->id;
             $journal->sale_id = $action->id;
             $journal->account = 'sale';
+            $journal->date = $action->date;
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
@@ -608,6 +611,7 @@ class PostController extends Controller
             $journal_2->user_id = $user->id;
             $journal_2->sale_id = $action->id;
             $journal->account = 'sale';
+            $journal_2->date = $action->date;
             $journal_2->save();
             $journal_2 = Journals::orderBy('id','DESC')->first();
 
@@ -738,34 +742,34 @@ class PostController extends Controller
 
                 if($purchase->transport){
                     $narration = "Transport cost of BDT ".$purchase->transport;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport',$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->transport,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->transport,$journal);
 
                     $narration = "Transport cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'transport',$purchase->date);
                     $this->setIntoJournal('Transport','Dr',$purchase->transport,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
                 }
                 if($purchase->labour){
                     $narration = "Labour cost of BDT ".$purchase->labour;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'labour',$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->labour,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->labour,$journal);
 
                     $narration = "Labour cost of BDT ".$purchase->labour." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId, 'labour');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId, 'labour',$purchase->date);
                     $this->setIntoJournal('Labour','Dr',$purchase->labour,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->labour,$journal);
                 }
                 if($purchase->other){
                     $narration = "Others cost of BDT ".$purchase->other;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId, 'others');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId, 'others',$purchase->date);
                     $this->setIntoJournal($supplier->company,'Dr',$purchase->other,$journal);
                     $this->setIntoJournal('Cash','Cr',$purchase->other,$journal);
 
                     $narration = "Others cost of BDT ".$purchase->other." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others');
+                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,'others',$purchase->date);
                     $this->setIntoJournal('Other','Dr',$purchase->other,$journal);
                     $this->setIntoJournal($supplier->company,'Cr',$purchase->other,$journal);
                 }
@@ -870,9 +874,10 @@ class PostController extends Controller
         }
     }
 
-    protected function createReturnJournal($item,$user,$type,$quantity){
+    protected function createReturnJournal($item,$user,$type,$quantity,$date){
         $journal = new Journals();
         $journal->user_id = $user->id;
+        $journal->date = Carbon::parse($date);
         if($type == 'sale') {
             $personnel = $item->buyer;
             $amount = intval($quantity)*intval($item->product[0]->pivot->price);
@@ -901,17 +906,22 @@ class PostController extends Controller
             $this->setIntoJournal('Purchase Return','Cr',$amount,$journal);
         }
 
-            $journal_2 = new Journals();
-            $journal_2->user_id = $user->id;
+        $journal_2 = new Journals();
+        $journal_2->user_id = $user->id;
+        $journal_2->date =Carbon::parse($date);
+
         if($type == 'sale') {
             $journal_2->sale_id = $item->id;
             $journal_2->account = 'sale-return';
+            $journal_2->date =Carbon::parse($date);
             $narration_2 = "$personnel->company has returned BDT $amount";
-        }else{
+        }
+        else{
             $journal_2->purchase_id = $item->id;
             $journal_2->account = 'purchase-return';
             $narration_2 = "$personnel->company has returned BDT $amount";
         }
+
         $journal_2->narration = $narration_2;
         $journal_2->save();
         $journal_2 = Journals::orderBy('id','DESC')->first();
@@ -942,7 +952,7 @@ class PostController extends Controller
                     $sale = Sales::with(["product" => function($query) use($item){
                         return $query->where('id',$item->id);
                     } ,'buyer'])->find($input->id);
-                    $this->createReturnJournal($sale ,$user, 'sale',$item->quantity);
+                    $this->createReturnJournal($sale ,$user, 'sale',$item->quantity,$input->date);
                     return response("success",200);
                 }
             }
@@ -966,12 +976,13 @@ class PostController extends Controller
         }
     }
 
-    protected function createJournalEntry($narration,$user_id,$purchase_id,$account){
+    protected function createJournalEntry($narration,$user_id,$purchase_id,$account,$date){
         $journal = new Journals();
         $journal->user_id = $user_id;
         $journal->purchase_id = $purchase_id;
         $journal->narration = $narration;
         $journal->account = $account;
+        $journal->date = $date;
         $journal->save();
         $journal = Journals::orderBy('id','DESC')->first();
         return $journal;
@@ -1124,6 +1135,7 @@ class PostController extends Controller
         $amount = $input->amount;
         $journal = new Journals();
         $journal->user_id = $user->id;
+        $journal->date =Carbon::parse($input->date);
         if($input->type == 'sale') {
             $personnel = Buyers::find($input->personnel);
             $narration = "Advance has been received for sales $personnel->company of $amount";
@@ -1152,6 +1164,7 @@ class PostController extends Controller
 
         $journal_2 = new Journals();
         $journal_2->user_id = $user->id;
+        $journal_2->date =Carbon::parse($input->date);
         if($input->type == 'sale') {
             $journal_2->sale_id = $account->id;
             $journal_2->account = 'advance-sale';
