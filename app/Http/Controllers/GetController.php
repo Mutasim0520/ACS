@@ -268,7 +268,7 @@ class GetController extends Controller
                     $object = new \stdClass();
                     $object->account = $item2->name;
                     $object->value = $item2->pivot->value;
-                    $object->date = $item->created_at;
+                    $object->date = $item->date;
                     $ledgers[] = $object;
                 }
             }
@@ -872,6 +872,7 @@ class GetController extends Controller
 
     public function getProfitAndLossAccount(Request $request){
         $balance_sheet = $this->prepareBalanceSheet($request->from, $request->to);
+
         $profit_loss = new \stdClass();
         $expense = new \stdClass();
         $revenue = new \stdClass();
@@ -880,8 +881,9 @@ class GetController extends Controller
         $direct_expenses_accounts = [];
         $direct_revenues_accounts = [];
         $total_direct_revenue = 0;
+
         foreach ($balance_sheet as $item){
-            if($item->name == 'Purchase' || $item->name == 'Transport' || $item->name == 'Other' || $item->name == 'Labour'){
+            if($item->name == 'Purchase' || $item->name == 'Transport' || $item->name == 'Other' || $item->name == 'Labour' || $item->name == 'Purchase Advance'){
                 $obj = new \stdClass();
                 $obj->name = $item->name;
                 $obj->balance = $item->balance;
@@ -890,7 +892,7 @@ class GetController extends Controller
             }
         }
         foreach ($balance_sheet as $item){
-            if($item->name == 'Sale'){
+            if($item->name == 'Sale' || $item->name == 'Sale Advance'){
                 $obj = new \stdClass();
                 $obj->name = $item->name;
                 $obj->balance = $item->balance;
@@ -901,7 +903,7 @@ class GetController extends Controller
         $from = date('Y-m-d H:i:s', strtotime($request->from));
         $to = date('Y-m-d H:i:s', strtotime($request->to));
 
-        $purchase = Purchases::with('product')->whereBetween('created_at',[$from,$to])->get();
+        $purchase = Purchases::with('product')->whereBetween('date',[$from,$to])->get();
         $closing_stock = 0;
         foreach ($purchase as $item){
             foreach ($item->product as $product){
