@@ -255,179 +255,6 @@ class UpdateController extends Controller
         }
     }
 
-    public function storePurchasedProductPrice(Request $request){
-        $user = User::where('api_token',$request->header('api-token'))->first();
-        try{
-            $input = json_decode($request->purchase);
-            $purchase = Purchases::find($input->purchaseId);
-            if($purchase->status == 'complete'){
-                $response = [
-                    'message' => 'already completed'
-                ];
-                return response(json_encode($response,304));
-            }
-            else{
-                $purchase->transport = $input->transport;
-                $purchase->vat = $input->vat;
-                $purchase->discount = $input->discount;
-                $purchase->labour = $input->labour;
-                $purchase->other = $input->others;
-                $purchase->accounts_id = $user->id;
-                $purchase->status = "complete";
-                $purchase->save();
-
-
-                $purchase = Purchases::with('supplier','product')->where('id',$input->purchaseId)->first();
-
-                $this->createNewLedger($purchase->supplier);
-                $total = 0;
-                foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase,"old");
-                    $total = floatval($item->total)+$total;
-                }
-                $supplier = $purchase->supplier;
-
-                if($purchase->transport){
-                    $narration = "Transport cost of BDT ".$purchase->transport;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal($supplier->company,'Dr',$purchase->transport,$journal);
-                    $this->setIntoJournal('Cash','Cr',$purchase->transport,$journal);
-
-                    $narration = "Transport cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal('Transport','Dr',$purchase->transport,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
-                }
-                if($purchase->labour){
-                    $narration = "Labour cost of BDT ".$purchase->labour;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal($supplier->company,'Dr',$purchase->labour,$journal);
-                    $this->setIntoJournal('Cash','Cr',$purchase->labour,$journal);
-
-                    $narration = "Labour cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal('Labour','Dr',$purchase->labour,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
-                }
-                if($purchase->other){
-                    $narration = "Others cost of BDT ".$purchase->other;
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal($supplier->company,'Dr',$purchase->other,$journal);
-                    $this->setIntoJournal('Cash','Cr',$purchase->other,$journal);
-
-                    $narration = "Others cost of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId,$purchase->date);
-                    $this->setIntoJournal('Other','Dr',$purchase->other,$journal);
-                    $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
-                }
-//                if($purchase->vat){
-//                    $vat = floor($total*13/100);
-//                    $narration = "Vat of BDT ".$vat;
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
-//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-//                    $this->setIntoJournal('Cash','Cr',$vat,$journal);
-//                    $narration = "Vat of BDT ".$purchase->transport." for purchasing product from $supplier->company";
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->purchaseId);
-//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-//                    $this->setIntoJournal($supplier->company,'Cr',$purchase->transport,$journal);
-//                }
-                $this->changeAccountStatusOfProduct($input->products);
-
-                $response = [
-                    'message' => 'created'
-                ];
-                return response(json_encode($response,201));
-            }
-        }catch (Exception $e){
-            error_reporting($e);
-        }
-    }
-
-    public function storeSoldProductPrice(Request $request){
-        $user = User::where('api_token',$request->header('api-token'))->first();
-        try{
-            $input = json_decode($request->sale);
-            $sale = Sales::find($input->saleId);
-            if($sale->status == 'complete'){
-                $response = [
-                    'message' => 'already completed'
-                ];
-                return response(json_encode($response,304));
-            }
-            else{
-                $sale->transport = $input->transport;
-                $sale->vat = $input->vat;
-                $sale->discount = $input->discount;
-                $sale->labour = $input->labour;
-                $sale->other = $input->others;
-                $sale->accounts_id = $user->id;
-                $sale->status = "complete";
-                $sale->save();
-
-
-                $sale = Sales::with('buyer','product')->where('id',$input->saleId)->first();
-
-                $this->createNewLedger($sale->buyer);
-                $total = 0;
-                foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'sale' , $sale,"old");
-                    $total = floatval($item->total)+$total;
-                }
-                $supplier = $sale->buyer;
-
-//                if($sale->transport){
-//                    $narration = "Transport cost of BDT ".$sale->transport;
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
-//                    $this->setIntoJournal('Cash','Cr',$sale->transport,$journal);
-//                    $narration = "Transport cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Transport','Dr',$sale->transport,$journal);
-//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-//                }
-//                if($sale->labour){
-//                    $narration = "Labour cost of BDT ".$sale->labour;
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
-//                    $this->setIntoJournal('Cash','Cr',$sale->labour,$journal);
-//                    $narration = "Labour cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Labour','Dr',$sale->labour,$journal);
-//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-//                }
-//                if($sale->other){
-//                    $narration = "Others cost of BDT ".$sale->other;
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
-//                    $this->setIntoJournal('Cash','Cr',$sale->other,$journal);
-//                    $narration = "Others cost of BDT ".$sale->transport." for purchasing product from $supplier->company";
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Other','Dr',$sale->other,$journal);
-//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-//                }
-//                if($sale->vat){
-//                    $vat = floor($total*13/100);
-//                    $narration = "Vat of BDT ".$vat;
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-//                    $this->setIntoJournal('Cash','Cr',$vat,$journal);
-//                    $narration = "Vat of BDT ".$sale->transport." for purchasing product from $supplier->company";
-//                    $journal = $this->createJournalEntry($narration,$user->id,$input->saleId);
-//                    $this->setIntoJournal('Vat','Dr',$vat,$journal);
-//                    $this->setIntoJournal($supplier->company,'Cr',$sale->transport,$journal);
-//                }
-                $this->setPurchasePriceOfProduct($input->products,$sale);
-
-                $response = [
-                    'message' => 'created'
-                ];
-                return response(json_encode($response,201));
-            }
-        }catch (Exception $e){
-            error_reporting($e);
-        }
-    }
-
     public function updatePricePurchase(Request $request){
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
@@ -636,6 +463,7 @@ class UpdateController extends Controller
     }
 
     public function addPaymentToPurchase(Request $request){
+        return "got";
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->purchase);
@@ -684,7 +512,8 @@ class UpdateController extends Controller
                 $purchase = Purchases::with('supplier','product')->where('id',$input->purchaseId)->first();
 
                 foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase,"new");
+
+                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase,"new","");
                 }
                 $response = [
                     'message' => 'created'
@@ -963,6 +792,7 @@ class UpdateController extends Controller
         }
     }
 
+
     public function updatePSIntoJournal($product,$user,$action_type,$action,$old_journal){
         if($action_type == 'purchase'){
             foreach ($old_journal as $item){
@@ -975,7 +805,7 @@ class UpdateController extends Controller
                     }
                 }
             }
-            $this->setPSIntoJournal($product , $user , $action_type , $action);
+            $this->setPSIntoJournal($product , $user , $action_type , $action,"old");
         }
         else{
             foreach ($old_journal as $item){
@@ -983,7 +813,7 @@ class UpdateController extends Controller
                     $this->deleteJournalEntry($item->id);
                 }
             }
-            $this->setPSIntoJournal($item , $user , $action_type , $action);
+            $this->setPSIntoJournal($item , $user , $action_type , $action,"old");
         }
     }
 

@@ -479,7 +479,6 @@ class PostController extends Controller
             $newLedger = new Ledgers();
             $newLedger->name = $ledger;
             $newLedger->save();
-            $newLedger = Ledgers::orderBy('id','DESC')->first();
         }
     }
 
@@ -499,88 +498,102 @@ class PostController extends Controller
         $journal->ledger()->save($ledger,['account_type' => $type,'value' => $value]);
     }
 
-    public function setPSIntoJournal($item,$user,$action_type,$action){
+    public function setPSIntoJournal($item,$user,$action_type,$action,$paid_value,$status){
         $category = $item->payment_category;
         $type = $item->payment_type;
         $discount = $action->discount;
         if($action_type == 'purchase'){
             $supplier = $action->supplier;
-            $amount = intval($item->total)-intval($discount);
-            $narration = "Purchased goods from $supplier->company of BDT $amount and got discount of BDT $discount";
+            $due = intval($action->total_value)- $paid_value;
+            if($status == "new"){
+                $narration = "Purchased goods from $supplier->company of BDT $action->total_value  and got discount of BDT $discount. Purchase ID: $action->id";
+            }
+            else{
+                $narration = "Purchase ID: $action->id. Paid payment to purchase of BDT $paid_value.";
+            }
 
             $journal = new Journals();
             $journal->user_id = $user->id;
             $journal->purchase_id = $action->id;
             $journal->account = 'purchase';
-            $journal->date = $action->date;
+            if($status == "new") $journal->date = $action->date;
+            else $journal->date = Carbon::today();
+            $journal->narration = $narration;
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
             $narration_2 ="";
-            $this->setIntoJournal('Purchase','Dr',$item->total,$journal);
-            if($discount){
-                $this->setIntoJournal($supplier->company,'Cr',$amount,$journal);
-                $this->setIntoJournal('Discount','Cr',$discount,$journal);
+            if($status == "new"){
+                $this->setIntoJournal('Purchase','Dr',$action->total_value,$journal);
+                if($discount){
+                    $this->setIntoJournal($supplier->company,'Cr',$action->total_value-intval($discount),$journal);
+                    $this->setIntoJournal('Discount','Cr',$discount,$journal);
+                }
+                else $this->setIntoJournal($supplier->company,'Cr',$action->total_value,$journal);
             }
-            else $this->setIntoJournal($supplier->company,'Cr',$item->total,$journal);
+            else{
+                $this->setIntoJournal('Purchase','Dr',$paid_value,$journal);
+                $this->setIntoJournal($supplier->company,'Cr',$paid_value,$journal);
+            }
 
             $journal_2 = new Journals();
             $journal_2->user_id = $user->id;
             $journal_2->purchase_id = $action->id;
             $journal_2->account = 'purchase';
-            $journal_2->date = $action->date;
+            if($status == "new") $journal_2->date = $action->date;
+            else $journal_2->date = Carbon::today();
             $journal_2->save();
             $journal_2 = Journals::orderBy('id','DESC')->first();
+
+            if($discount) $total_company = $action->total_value-intval($discount);
+            else $total_company = $action->total_value;
 
             if($category == '3'){
                 $value = $item->partial;
                 $check = $item->check;
                 if($type == '3'){
-                    $total = intval($value->cash)+intval($value->check);
-                    $narration_2 = "Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($supplier->company,'Dr',$total,$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check. Due $due";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
                     $this->setIntoJournal($check,'Cr',$value->check,$journal_2);
                     $this->setIntoJournal('Cash','Cr',$value->cash,$journal_2);
+                    $this->setIntoJournal('Accounts Payable','Cr',$due,$journal_2);
                 }
 
                 elseif ($type == '2'){
-                    $narration_2 = "Paid $supplier->company BDT $value->check in check at $check.";
-                    $this->setIntoJournal($supplier->company,'Dr',intval($value->check),$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $value->check in check at $check. Due $due";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
                     $this->setIntoJournal($check,'Cr',$value->check,$journal_2);
+                    $this->setIntoJournal('Accounts Payable','Cr',$due,$journal_2);
                 }
 
                 elseif ($type == '1'){
-                    $narration_2 = "Paid $supplier->company BDT $value->cash in cash.";
-                    $this->setIntoJournal($supplier->company,'Dr',intval($value->cash),$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $value->cash in cash. Due $due";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
                     $this->setIntoJournal('Cash','Cr',$value->cash,$journal_2);
+                    $this->setIntoJournal('Accounts Payable','Cr',$due,$journal_2);
                 }
             }
 
             elseif ($category == '1'){
-                $amount = intval($item->total)-intval($discount);
                 $check = $item->check;
                 if ($type == '2'){
-                    $narration_2 = "Paid $supplier->company BDT $amount in check at $check.";
-                    $this->setIntoJournal($supplier->company,'Dr',$amount,$journal_2);
-                    $this->setIntoJournal($check,'Cr',$amount,$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $total_company in check at $check.";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
+                    $this->setIntoJournal($check,'Cr',$total_company,$journal_2);
                 }
                 elseif ($type == '1'){
-                    $narration_2 = "Paid $supplier->company BDT $amount in cash.";
-                    $this->setIntoJournal($supplier->company,'Dr',$amount,$journal_2);
-                    $this->setIntoJournal('Cash','Cr',$amount,$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $total_company in cash.";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
+                    $this->setIntoJournal('Cash','Cr',$total_company,$journal_2);
                 }
                 elseif($type == '3'){
                     $value = $item->partial;
-                    $paid = intval($value->cash)+intval($value->check);
-                    $narration_2 = "Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($supplier->company,'Dr',$paid,$journal_2);
+                    $narration_2 = "Purchased goods from $supplier->company of BDT $action->total_value. Paid $supplier->company BDT $value->cash in cash and BDT $value->check in check at $check.";
+                    $this->setIntoJournal($supplier->company,'Dr',$total_company,$journal_2);
                     $this->setIntoJournal('Cash','Cr',$value->cash,$journal_2);
                     $this->setIntoJournal($check,'Cr',$value->check,$journal_2);
                 }
             }
-
-            $journal->narration = $narration;
-            $journal->save();
 
             $journal_2->narration = $narration_2;
             $journal_2->save();
@@ -588,75 +601,90 @@ class PostController extends Controller
         }
         else{
             $buyer = $action->buyer;
-            $amount = intval($item->total)-intval($discount);
-            $narration = "Sold goods to $buyer->company of BDT $amount and got discount of BDT $discount";
-
+            $due = intval($action->total_value)- $paid_value;
+            if($status == "new"){
+                $narration = "Sold products to $buyer->company of BDT $action->total_value  and got discount of BDT $discount. Sale ID: $action->id";
+            }
+            else{
+                $narration = "Sale ID: $action->id. Paid payment to sale of BDT $paid_value.";
+            }
             $journal = new Journals();
             $journal->user_id = $user->id;
             $journal->sale_id = $action->id;
             $journal->account = 'sale';
-            $journal->date = $action->date;
+            if($status == "new") $journal->date = $action->date;
+            else $journal->date = Carbon::today();
             $journal->save();
             $journal = Journals::orderBy('id','DESC')->first();
 
             $narration_2 ="";
-            $this->setIntoJournal('Sale','Cr',$item->total,$journal);
-            if($discount){
-                $this->setIntoJournal($buyer->company,'Dr',$amount,$journal);
-                $this->setIntoJournal('Discount','Dr',$discount,$journal);
+            if($status == "new"){
+                $this->setIntoJournal('Sale','Cr',$action->total_value,$journal);
+                if($discount){
+                    $this->setIntoJournal($buyer->company,'Dr',$action->total_value-intval($discount),$journal);
+                    $this->setIntoJournal('Discount','Dr',$discount,$journal);
+                }
+                else $this->setIntoJournal($buyer->company,'Dr',$action->total_value,$journal);
             }
-            else $this->setIntoJournal($buyer->company,'Dr',$item->total,$journal);
+            else{
+                $this->setIntoJournal('Sale','Cr',$paid_value,$journal);
+                $this->setIntoJournal($buyer->company,'Dr',$paid_value,$journal);
+            }
 
             $journal_2 = new Journals();
             $journal_2->user_id = $user->id;
             $journal_2->sale_id = $action->id;
             $journal->account = 'sale';
-            $journal_2->date = $action->date;
+            if($status == "new") $journal->date = $action->date;
+            else $journal->date = Carbon::today();
             $journal_2->save();
             $journal_2 = Journals::orderBy('id','DESC')->first();
+
+            if($discount) $total_company = $action->total_value-intval($discount);
+            else $total_company = $action->total_value;
 
             if($category == '3'){
                 $value = $item->partial;
                 $check = $item->check;
                 if($type == '3'){
-                    $total = intval($value->cash)+intval($value->check);
-                    $narration_2 = "Recieved from $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($buyer->company,'Cr',$total,$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check. Due $due";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
                     $this->setIntoJournal($check,'Dr',$value->check,$journal_2);
                     $this->setIntoJournal('Cash','Dr',$value->cash,$journal_2);
+                    $this->setIntoJournal('Accounts Receivable','Dr',$due,$journal_2);
                 }
 
                 elseif ($type == '2'){
-                    $narration_2 = "Recieved from $buyer->company BDT $value->check in check at $check.";
-                    $this->setIntoJournal($buyer->company,'Cr',intval($value->check),$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $value->check in check at $check. Due $due";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
                     $this->setIntoJournal($check,'Dr',$value->check,$journal_2);
+                    $this->setIntoJournal('Accounts Receivable','Dr',$due,$journal_2);
                 }
 
                 elseif ($type == '1'){
-                    $narration_2 = "Recieved from $buyer->company BDT $value->cash in cash.";
-                    $this->setIntoJournal($buyer->company,'Cr',intval($value->cash),$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $value->cash in cash. Due $due";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
                     $this->setIntoJournal('Cash','Dr',$value->cash,$journal_2);
+                    $this->setIntoJournal('Accounts Receivable','Dr',$due,$journal_2);
                 }
             }
 
             elseif ($category == '1'){
-                $amount = intval($item->total)-intval($discount);
                 $check = $item->check;
                 if ($type == '2'){
-                    $narration_2 = "Recieved from $buyer->company BDT $amount in check at $check.";
-                    $this->setIntoJournal($buyer->company,'Cr',$amount,$journal_2);
-                    $this->setIntoJournal($check,'Dr',$amount,$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $total_company in check at $check.";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
+                    $this->setIntoJournal($check,'Dr',$total_company,$journal_2);
                 }
                 elseif ($type == '1'){
-                    $narration_2 = "Recieved from $buyer->company BDT $amount in cash.";
-                    $this->setIntoJournal($buyer->company,'Cr',$amount,$journal_2);
-                    $this->setIntoJournal('Cash','Dr',$amount,$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $total_company in cash.";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
+                    $this->setIntoJournal('Cash','Dr',$total_company,$journal_2);
                 }
                 elseif($type == '3'){
                     $value = $item->partial;
-                    $paid = intval($value->cash)+intval($value->check);
-                    $narration_2 = "Recieved from $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check.";
-                    $this->setIntoJournal($buyer->company,'Cr',$paid,$journal_2);
+                    $narration_2 = "Sold products to $buyer->company of BDT $action->total_value. Paid $buyer->company BDT $value->cash in cash and BDT $value->check in check at $check.";
+                    $this->setIntoJournal($buyer->company,'Cr',$total_company,$journal_2);
                     $this->setIntoJournal('Cash','Dr',$value->cash,$journal_2);
                     $this->setIntoJournal($check,'Dr',$value->check,$journal_2);
                 }
@@ -674,6 +702,7 @@ class PostController extends Controller
         $user = User::where('api_token',$request->header('api-token'))->first();
         try{
             $input = json_decode($request->purchase);
+
             $purchase = Purchases::with('advance')->find($input->purchaseId);
             if($purchase->status == 'complete'){
                 $response = [
@@ -694,25 +723,25 @@ class PostController extends Controller
                 $due = 0;
                 foreach ($input->products as $item){
                     $stock_value = $stock_value+$item->total;
-                    if($item->payment_category ==  2 || $item->payment_category == 3){
-                        $flag = "due";
-                        if($item->payment_category ==  2){
-                            $due = $due+$item->total;
+                }
+                if($input->payment_category ==  2 || $input->payment_category == 3){
+                    $flag = "due";
+                    if($input->payment_category ==  2){
+                        $due = $due+$stock_value;
+                    }
+                    else if($input->payment_category ==  3){
+                        $payment = $input->partial;
+                        if($input->payment_type == 1){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->cash)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->cash));
                         }
-                        else if($item->payment_category ==  3){
-                            $payment = $item->partial;
-                            if($item->payment_type == 1){
-                                if($purchase->advance) $due = $due+($item->total-$payment->cash-intval($purchase->advance->amount));
-                                else $due = $due+($item->total-$payment->cash-intval);
-                            }
-                            else if($item->payment_type == 2){
-                                if($purchase->advance) $due = $due+($item->total-$payment->check-intval($purchase->advance->amount));
-                                else $due = $due+($item->total-$payment->check);
-                            }
-                            else if($item->payment_type == 3){
-                                if($purchase->advance) $due = $due+($item->total-$payment->check-$payment->cash-intval($purchase->advance->amount));
-                                else $due = $due+($item->total-$payment->check-$payment->cash);
-                            }
+                        else if($input->payment_type == 2){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->check));
+                        }
+                        else if($input->payment_type == 3){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($payment->cash)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->check)-intval($payment->cash));
                         }
                     }
                 }
@@ -733,11 +762,8 @@ class PostController extends Controller
                 $purchase = Purchases::with('supplier','product')->where('id',$input->purchaseId)->first();
 
                 $this->createNewLedger($purchase->supplier);
-                $total = 0;
-                foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'purchase' , $purchase);
-                    $total = floatval($item->total)+$total;
-                }
+                $paid_value = $stock_value-$due;
+                $this->setPSIntoJournal($input , $user , 'purchase' , $purchase, $paid_value,"new");
                 $supplier = $purchase->supplier;
 
                 if($purchase->transport){
@@ -816,25 +842,25 @@ class PostController extends Controller
                 $due = 0;
                 foreach ($input->products as $item){
                     $stock_value = $stock_value+$item->total;
-                    if($item->payment_category ==  2 || $item->payment_category == 3){
-                        $flag = "due";
-                        if($item->payment_category ==  2){
-                            $due = $due+$item->total;
+                }
+                if($input->payment_category ==  2 || $input->payment_category == 3){
+                    $flag = "due";
+                    if($input->payment_category ==  2){
+                        $due = $due+$stock_value;
+                    }
+                    else if($input->payment_category ==  3){
+                        $payment = $input->partial;
+                        if($input->payment_type == 1){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->cash)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->cash));
                         }
-                        else if($item->payment_category ==  3){
-                            $payment = $item->partial;
-                            if($item->payment_type == 1){
-                                if($sale->advance) $due = $due+($item->total-$payment->cash-intval($sale->advance->amount));
-                                else $due = $due+($item->total-$payment->cash);
-                            }
-                            else if($item->payment_type == 2){
-                                if($sale->advance) $due = $due+($item->total-$payment->check-intval($sale->advance->amount));
-                                else $due = $due+($item->total-$payment->check);
-                            }
-                            else if($item->payment_type == 3){
-                                if($sale->advance) $due = $due+($item->total-$payment->check-$payment->cash-intval($sale->advance->amount));
-                                else $due = $due+($item->total-$payment->check-$payment->cash);
-                            }
+                        else if($input->payment_type == 2){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->check));
+                        }
+                        else if($input->payment_type == 3){
+                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($payment->cash)-intval($purchase->advance->amount));
+                            else $due = $due+($stock_value-intval($payment->check)-intval($payment->cash));
                         }
                     }
                 }
@@ -856,11 +882,9 @@ class PostController extends Controller
                 $sale = Sales::with('buyer','product')->where('id',$input->saleId)->first();
 
                 $this->createNewLedger($sale->buyer);
-                $total = 0;
-                foreach ($input->products as $item){
-                    $this->setPSIntoJournal($item , $user , 'sale' , $sale);
-                    $total = floatval($item->total)+$total;
-                }
+                $paid_value = $stock_value-$due;
+
+                $this->setPSIntoJournal($input , $user , 'sale' , $sale, $paid_value,"new");
 
                 $this->setSalePriceOfProduct($input->products,$sale);
 
