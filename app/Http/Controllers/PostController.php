@@ -946,15 +946,15 @@ class PostController extends Controller
                     else if($input->payment_category ==  3){
                         $payment = $input->partial;
                         if($input->payment_type == 1){
-                            if($purchase->advance) $due = $due+($stock_value-intval($payment->cash)-intval($purchase->advance->amount));
+                            if($sale->advance) $due = $due+($stock_value-intval($payment->cash)-intval($sale->advance->amount));
                             else $due = $due+($stock_value-intval($payment->cash));
                         }
                         else if($input->payment_type == 2){
-                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($purchase->advance->amount));
+                            if($sale->advance) $due = $due+($stock_value-intval($payment->check)-intval($sale->advance->amount));
                             else $due = $due+($stock_value-intval($payment->check));
                         }
                         else if($input->payment_type == 3){
-                            if($purchase->advance) $due = $due+($stock_value-intval($payment->check)-intval($payment->cash)-intval($purchase->advance->amount));
+                            if($sale->advance) $due = $due+($stock_value-intval($payment->check)-intval($payment->cash)-intval($sale->advance->amount));
                             else $due = $due+($stock_value-intval($payment->check)-intval($payment->cash));
                         }
                     }

@@ -576,7 +576,7 @@ class GetController extends Controller
             }
             $purchase_obj = new \stdClass();
             $purchase_obj->id = $purchase->id;
-            $purchase_obj->created_at = $purchase->created_at;
+            $purchase_obj->date = $purchase->date;
             $purchase_obj->reference = $purchase->reference;
             $purchase_obj->supplier = $purchase->supplier;
             $purchase_obj->transport = $purchase->transport;
@@ -774,7 +774,7 @@ class GetController extends Controller
             }
             $obj = new \stdClass();
             $obj->id = $purchase->id;
-            $obj->created_at = $purchase->created_at;
+            $obj->date = $purchase->date;
             $obj->reference = $purchase->reference;
             $obj->supplier = $purchase->supplier;
             $obj->transport = $purchase->transport;
@@ -801,7 +801,7 @@ class GetController extends Controller
             },'product','buyer','advance'])->where('id',$request->id)->first();
             $obj = new \stdClass();
             $obj->id = $sale->id;
-            $obj->created_at = $sale->created_at;
+            $obj->date = $sale->date;
             $obj->buyer = $sale->buyer;
             $obj->reference = $sale->reference;
             $obj->transport = $sale->transport;
