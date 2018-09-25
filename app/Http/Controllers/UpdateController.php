@@ -888,6 +888,18 @@ class UpdateController extends Controller
         }
     }
 
+    public function updateOpeningBalanceToLedger(Request $request){
+        try{
+            $ledger = Ledgers::find($request->id);
+            $ledger->opening_balance = $request->balance;
+            $ledger->opening_balance_type = $request->type;
+            $ledger->save();
+            return response('success',201);
+        }catch (\Exception $e){
+            return response("error",500);
+        }
+    }
+
 //    public function updatePSIntoJournal($product,$user,$action_type,$action,$old_journal){
 //        if($action_type == 'purchase'){
 //            foreach ($old_journal as $item){

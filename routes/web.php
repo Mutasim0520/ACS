@@ -98,6 +98,8 @@ $router->group(['middleware' => 'auth'], function () use ($router){
     $router->get('/api/{role}/ledgers/bank_accounts',['uses' => 'GetController@getBankAccountsLedgers']);
     $router->get('/api/profit/loss/account',['uses' => 'GetController@getProfitAndLossAccount']);
     $router->get('/api/profit-loss',['uses' => 'GetController@getProfitAndLossAccount']);
+    $router->post('/api/add/opening-balance/ledger',['uses' => 'PostController@addOpeningBalanceToLedger']);
+    $router->post('/api/update/opening-balance/ledger',['uses' => 'UpdateController@updateOpeningBalanceToLedger']);
 
 });
 

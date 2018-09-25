@@ -1381,4 +1381,16 @@ class PostController extends Controller
         return response("success",200);
     }
 
+    public function addOpeningBalanceToLedger(Request $request){
+        try{
+            $ledger = Ledgers::find($request->id);
+            $ledger->opening_balance = $request->balance;
+            $ledger->opening_balance_type = $request->type;
+            $ledger->save();
+            return response('success',201);
+        }catch (\Exception $e){
+            return response("error",500);
+        }
+    }
+
 }

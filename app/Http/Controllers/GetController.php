@@ -339,6 +339,27 @@ class GetController extends Controller
 
         }
 
+        if($ledgers[0]->opening_balance){
+            $initial_opening_balance = $ledgers[0]->opening_balance;
+            $initial_opening_balance_type = $ledgers[0]->opening_balance_type;
+            if($initial_opening_balance_type == $opening_balance->balance_type){
+                $opening_balance->balance = $opening_balance->balance + $initial_opening_balance;
+            }
+            else{
+                if($initial_opening_balance > $opening_balance->balance){
+                    $opening_balance->balance = $initial_opening_balance - $opening_balance->balance;
+                    $opening_balance->balance_type = $initial_opening_balance_type;
+                }
+                elseif ($initial_opening_balance == $opening_balance->balance){
+                    $opening_balance->balance = 0;
+                    $opening_balance->balance_type = 'N/A';
+                }
+                else{
+                    $opening_balance->balance = $opening_balance->balance - $initial_opening_balance;
+                }
+            }
+        }
+
         foreach ($ledgers as $item){
             $balance = 0;
             $type = 'N/A';
