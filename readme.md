@@ -2,3 +2,12 @@
 <p>
 This is a web based supply chain management and accounting software for a buying house in Bangladesh. This software produce several accounting reports like ledger, journals, final reports, profit-loss report, balance sheet, final report. This software also manage all the products listing, buyers and sellers list, product repository, daily, weekly and monthly buying and selling reports.
 </p>
+<p>
+  php >= 7.1.3, Composer should be installed in you machine
+</p>
+<p>
+ To sreve the project locally open the command propmt and run the following command
+</p>
+<p style = "color:red">
+  php -S localhost:8000 -t public
+</p>
